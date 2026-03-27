@@ -1,0 +1,147 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #0f1f3d;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 420px;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 3px;
+}
+
+.tagline-en {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.tagline-si {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-size: 13px;
+  color: #475569;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: #3b82f6;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 11px;
+  background: #1d4ed8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: #1e40af;
+}
+
+.forgot {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.forgot a {
+  font-size: 11px;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.register-link {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  text-align: center;
+}
+
+.register-link p {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.register-link a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.footer {
+  text-align: center;
+  color: #475569;
+  font-size: 12px;
+  margin-top: 1.5rem;
+}
