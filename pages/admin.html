@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Admin</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; }
+      .table-wrap { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-top: 1.5rem; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th { background: #f1f5f9; padding: 12px 16px; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+      td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #1e293b; vertical-align: middle; }
+      tr:last-child td { border-bottom: none; }
+      tr:hover td { background: #f8fafc; }
+      .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+      .badge-new { background: #dbeafe; color: #1d4ed8; }
+      .badge-contacted { background: #fef3c7; color: #92400e; }
+      .badge-approved { background: #dcfce7; color: #166534; }
+      .badge-rejected { background: #fee2e2; color: #991b1b; }
+      .btn-approve { background: #1d4ed8; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+      .btn-approve:hover { background: #1e40af; }
+      .btn-reject { background: white; color: #dc2626; border: 1px solid #dc2626; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 6px; }
+      .btn-reject:hover { background: #fee2e2; }
+      .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+      .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+      .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; }
+      .stat-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+      .stat-value { font-size: 22px; font-weight: bold; color: #1e293b; }
+      .empty-state { text-align: center; color: #64748b; padding: 3rem; }
+    </style>
+  </head>
+  <body>
+
+    <div class="topbar">
+      <span class="logo-name" style="font-size:18px;">CLARIX — Admin</span>
+      <div class="topbar-right">
+        <button class="btn-signout" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="dashboard-content">
+
+      <div class="admin-header">
+        <div>
+          <h1 class="dash-title">Lender Applications</h1>
+          <p class="dash-subtitle">Review and approve new lender access requests</p>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <p class="stat-label">Total Applications</p>
+          <p class="stat-value" id="stat-total">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">New</p>
+          <p class="stat-value" id="stat-new">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Approved</p>
+          <p class="stat-value" id="stat-approved">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Rejected</p>
+          <p class="stat-value" id="stat-rejected">—</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Business</th>
+              <th>District</th>
+              <th>Phone</th>
+              <th>Loans</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="applications-list">
+            <tr><td colspan="8" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      async function loadApplications() {
+        const { data, error } = await supabase
+          .from('applications')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        const tbody = document.getElementById('applications-list')
+
+        if (error) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error loading applications.</td></tr>'
+          return
+        }
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No applications yet.</td></tr>'
+          return
+        }
+
+        document.getElementById('stat-total').textContent = data.length
+        document.getElementById('stat-new').textContent = data.filter(a => a.status === 'new').length
+        document.getElementById('stat-approved').textContent = data.filter(a => a.status === 'approved').length
+        document.getElementById('stat-rejected').textContent = data.filter(a => a.status === 'rejected').length
+
+        tbody.innerHTML = data.map(app => `
+          <tr>
+            <td><strong>${app.full_name}</strong></td>
+            <td>${app.business_name}</td>
+            <td>${app.district}</td>
+            <td>${app.phone}</td>
+            <td>${app.loan_count}</td>
+            <td><span class="badge badge-${app.status}">${app.status}</span></td>
+            <td>${new Date(app.created_at).toLocaleDateString()}</td>
+            <td>
+              ${app.status === 'new' ? `
+                <button class="btn-approve" onclick="approveApplication('${app.id}', '${app.full_name}', '${app.business_name}', '${app.business_type}', '${app.district}', '${app.phone}')">Approve</button>
+                <button class="btn-reject" onclick="rejectApplication('${app.id}')">Reject</button>
+              ` : '—'}
+            </td>
+          </tr>
+        `).join('')
+      }
+
+      window.approveApplication = async function(id, full_name, business_name, business_type, district, phone) {
+        const tempPassword = 'Clarix' + Math.floor(1000 + Math.random() * 9000)
+
+        const { error: lenderError } = await supabase
+          .from('lenders')
+          .insert([{ 
+            application_id: id, 
+            full_name, 
+            business_name, 
+            business_type, 
+            district, 
+            phone, 
+            plan: 'free', 
+            status: 'active' 
+          }])
+
+        if (lenderError) {
+          alert('Error creating lender record: ' + lenderError.message)
+          return
+        }
+
+        await supabase
+          .from('applications')
+          .update({ status: 'approved' })
+          .eq('id', id)
+
+        alert(`Application approved!\n\nNow go to Supabase > Authentication > Users and create:\nEmail: ${phone.replace(/\s/g,'')}@clarix.lk\nPassword: ${tempPassword}\n\nShare these login details with the lender.`)
+
+        loadApplications()
+      }
+
+      window.rejectApplication = async function(id) {
+        if (!confirm('Are you sure you want to reject this application?')) return
+
+        await supabase
+          .from('applications')
+          .update({ status: 'rejected' })
+          .eq('id', id)
+
+        loadApplications()
+      }
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+
+      loadApplications()
+    </script>
+
+  </body>
+</html>
