@@ -6,7 +6,7 @@
     <title>Clarix — Sign In</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
-  <body>
+  <body class="login-body">
 
     <div class="page">
 
@@ -25,15 +25,17 @@
 
           <div class="field">
             <label>Phone Number / දුරකථන අංකය</label>
-            <input type="text" placeholder="07X XXX XXXX" />
+            <input type="text" id="phone" placeholder="07X XXX XXXX" />
           </div>
 
           <div class="field">
             <label>Password / මුරපදය</label>
-            <input type="password" placeholder="••••••••" />
+            <input type="password" id="password" placeholder="••••••••" />
           </div>
 
-          <button class="btn-primary">Sign In / ප්‍රවේශ වන්න</button>
+          <div id="error-msg" style="color:#dc2626;font-size:12px;margin-bottom:8px;display:none;"></div>
+
+          <button class="btn-primary" onclick="signIn()">Sign In / ප්‍රවේශ වන්න</button>
 
           <div class="forgot">
             <a href="#">Forgot password? / මුරපදය අමතකද?</a>
@@ -50,6 +52,44 @@
       </div>
 
     </div>
+
+    <script type="module">
+      import { supabase } from './js/supabase.js'
+
+      window.signIn = async function() {
+
+        const phone = document.getElementById('phone').value.trim()
+        const password = document.getElementById('password').value
+        const errorMsg = document.getElementById('error-msg')
+
+        if (!phone || !password) {
+          errorMsg.textContent = 'Please enter your phone number and password.'
+          errorMsg.style.display = 'block'
+          return
+        }
+
+        const button = document.querySelector('.btn-primary')
+        button.textContent = 'Signing in...'
+        button.disabled = true
+        errorMsg.style.display = 'none'
+
+        const email = phone.replace(/\s/g, '') + '@clarix.lk'
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password
+        })
+
+        if (error) {
+          errorMsg.textContent = 'Incorrect phone number or password. / වැරදි දුරකථන අංකයක් හෝ මුරපදයකි.'
+          errorMsg.style.display = 'block'
+          button.textContent = 'Sign In / ප්‍රවේශ වන්න'
+          button.disabled = false
+        } else {
+          window.location.href = 'pages/dashboard.html'
+        }
+      }
+    </script>
 
   </body>
 </html>

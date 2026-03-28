@@ -8,9 +8,13 @@ body {
   font-family: Arial, sans-serif;
   background-color: #0f1f3d;
   min-height: 100vh;
+}
+
+.login-body {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
 }
 
 .page {
@@ -144,4 +148,95 @@ body {
   color: #475569;
   font-size: 12px;
   margin-top: 1.5rem;
+}.topbar {
+  background: #0f1f3d;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.btn-signout {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-signout:hover {
+  border-color: #94a3b8;
+  color: white;
+}
+
+.dashboard-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.dash-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.dash-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 2rem;
+}
+
+.dash-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.dash-card-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.dash-card-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.dash-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 11px 20px;
+  background: white;
+  color: #1d4ed8;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #eff6ff;
 }

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css" />
+<style>
+  body { background-color: #f8fafc; min-height: 100vh; }
+  .page { display: none; }
+</style>
+  </head>
+  <body>
+
+    <div id="app" style="display:none;min-height:100vh;background:#f8fafc;">
+
+      <div class="topbar">
+        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <div class="topbar-right">
+          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
+          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+        <h1 class="dash-title">Dashboard</h1>
+        <p class="dash-subtitle">Welcome to Clarix — Informal Lending Intelligence Network</p>
+
+        <div class="dash-cards">
+          <div class="dash-card">
+            <p class="dash-card-label">Total Records</p>
+            <p class="dash-card-value">0</p>
+          </div>
+          <div class="dash-card">
+            <p class="dash-card-label">Active Loans</p>
+            <p class="dash-card-value">0</p>
+          </div>
+          <div class="dash-card">
+            <p class="dash-card-label">Defaulters</p>
+            <p class="dash-card-value">0</p>
+          </div>
+          <div class="dash-card">
+            <p class="dash-card-label">Queries This Month</p>
+            <p class="dash-card-value">0</p>
+          </div>
+        </div>
+
+        <div class="dash-actions">
+          <button class="btn-primary">Query a Borrower</button>
+          <button class="btn-secondary">Submit a Record</button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '../index.html'
+      } else {
+        document.getElementById('app').style.display = 'block'
+        const phone = session.user.email.replace('@clarix.lk', '')
+        document.getElementById('lender-name').textContent = phone
+      }
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+    </script>
+
+  </body>
+</html>
