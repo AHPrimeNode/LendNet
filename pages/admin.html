@@ -91,6 +91,13 @@
 
     <script type="module">
       import { supabase } from '../js/supabase.js'
+      const ADMIN_EMAIL = '0771234567@clarix.lk'
+
+const { data: { session } } = await supabase.auth.getSession()
+
+if (!session || session.user.email !== ADMIN_EMAIL) {
+  window.location.href = '../index.html'
+}
 
       async function loadApplications() {
         const { data, error } = await supabase
