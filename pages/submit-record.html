@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Submit Record</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; }
+      .form-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem; margin-top: 1.5rem; }
+      .form-section-title { font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 1rem; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+      .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+      .field select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #1e293b; outline: none; background: white; }
+      .field select:focus { border-color: #3b82f6; }
+      .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #1e293b; outline: none; resize: vertical; font-family: Arial, sans-serif; }
+      .field textarea:focus { border-color: #3b82f6; }
+      .form-actions { display: flex; gap: 12px; margin-top: 1.5rem; }
+      .btn-cancel { padding: 11px 20px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+      .section-gap { margin-top: 1.5rem; }
+    </style>
+  </head>
+  <body>
+
+    <div id="page-content" style="display:none;">
+
+      <div class="topbar">
+        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <div class="topbar-right">
+          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
+          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+
+        <h1 class="dash-title">Submit a Record</h1>
+        <p class="dash-subtitle">Add a borrower record to the Clarix network</p>
+
+        <div class="form-card">
+
+          <p class="form-section-title">Borrower Details / ණය ගැනුම්කරු විස්තර</p>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Borrower NIC / ජාතික හැඳුනුම්පත් අංකය *</label>
+              <input type="text" id="borrower_nic" placeholder="e.g. 199012345678" />
+            </div>
+            <div class="field">
+              <label>Borrower Name / නම *</label>
+              <input type="text" id="borrower_name" placeholder="Full name" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Phone / දුරකථන අංකය</label>
+              <input type="text" id="borrower_phone" placeholder="07X XXX XXXX" />
+            </div>
+            <div class="field">
+              <label>District / දිස්ත්‍රික්කය</label>
+              <select id="borrower_district">
+                <option value="">Select district</option>
+                <option>Colombo / කොළඹ</option>
+                <option>Gampaha / ගම්පහ</option>
+                <option>Kandy / මහනුවර</option>
+                <option>Galle / ගාල්ල</option>
+                <option>Matara / මාතර</option>
+                <option>Kurunegala / කුරුණෑගල</option>
+                <option>Ratnapura / රත්නපුර</option>
+                <option>Badulla / බදුල්ල</option>
+                <option>Anuradhapura / අනුරාධපුර</option>
+                <option>Polonnaruwa / පොළොන්නරුව</option>
+                <option>Trincomalee / ත්‍රිකුණාමලය</option>
+                <option>Batticaloa / මඩකලපුව</option>
+                <option>Jaffna / යාපනය</option>
+                <option>Matale / මාතලේ</option>
+                <option>Nuwara Eliya / නුවරඑළිය</option>
+                <option>Hambantota / හම්බන්තොට</option>
+                <option>Kegalle / කෑගල්ල</option>
+                <option>Kalutara / කළුතර</option>
+                <option>Puttalam / පුත්තලම</option>
+                <option>Ampara / අම්පාර</option>
+                <option>Monaragala / මොණරාගල</option>
+                <option>Vavuniya / වවුනියාව</option>
+                <option>Mullaitivu / මුලතිව්</option>
+                <option>Kilinochchi / කිලිනොච්චි</option>
+                <option>Mannar / මන්නාරම</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-gap">
+            <p class="form-section-title">Loan Details / ණය විස්තර</p>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Record Type / වාර්තා වර්ගය *</label>
+              <select id="record_type">
+                <option value="">Select type</option>
+                <option value="active">Active Loan / සක්‍රිය ණය</option>
+                <option value="defaulter">Defaulter / පැහැර හැරීම</option>
+                <option value="partial_default">Partial Default / අර්ධ පැහැර හැරීම</option>
+                <option value="settled">Settled / ණය තීරණය</option>
+                <option value="restructured">Restructured / ප්‍රතිව්‍යුහගත</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Collateral / ඇපකර *</label>
+              <select id="collateral">
+                <option value="none">None / නැත</option>
+                <option value="gold">Gold / රත්රන්</option>
+                <option value="land">Land / ඉඩම</option>
+                <option value="vehicle">Vehicle / වාහනය</option>
+                <option value="other">Other / වෙනත්</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="field">
+              <label>Loan Amount (LKR) / ණය මුදල *</label>
+              <input type="number" id="loan_amount" placeholder="e.g. 50000" />
+            </div>
+            <div class="field">
+              <label>Outstanding (LKR) / ඉතිරි මුදල *</label>
+              <input type="number" id="outstanding" placeholder="e.g. 35000" />
+            </div>
+            <div class="field">
+              <label>Installment Amount (LKR) / වාරික මුදල</label>
+              <input type="number" id="installment_amount" placeholder="e.g. 5000" />
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="field">
+              <label>Installment Frequency / වාරික වාර</label>
+              <select id="installment_frequency">
+                <option value="">Select frequency</option>
+                <option value="daily">Daily / දිනපතා</option>
+                <option value="weekly">Weekly / සතිපතා</option>
+                <option value="biweekly">Biweekly / සති දෙකකට වරක්</option>
+                <option value="monthly">Monthly / මාසිකව</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Total Installments / මුළු වාරික</label>
+              <input type="number" id="total_installments" placeholder="e.g. 12" />
+            </div>
+            <div class="field">
+              <label>Installments Paid / ගෙවූ වාරික</label>
+              <input type="number" id="installments_paid" placeholder="e.g. 4" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Next Due Date / ඊළඟ ගෙවීමේ දිනය</label>
+              <input type="date" id="next_due_date" />
+            </div>
+          </div>
+
+          <div class="section-gap">
+            <p class="form-section-title">Additional Notes / අමතර සටහන්</p>
+          </div>
+
+          <div class="field">
+            <label>Notes / සටහන්</label>
+            <textarea id="notes" rows="3" placeholder="Any additional observations about this borrower..."></textarea>
+          </div>
+
+          <div class="field" style="margin-top:1rem;">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="consent" style="margin-top:3px;" />
+              <span style="font-size:12px;color:#475569;">I confirm that I have obtained the borrower's consent to submit this record to the Clarix network, in compliance with the Personal Data Protection Act (2022). / මම මෙම වාර්තාව Clarix ජාලයට ඉදිරිපත් කිරීමට ණය ගැනුම්කරුගේ කැමැත්ත ලබාගෙන ඇති බව තහවුරු කරමි.</span>
+            </label>
+          </div>
+
+          <div id="error-msg" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;"></div>
+
+          <div class="form-actions">
+            <button class="btn-primary" onclick="submitRecord()">Submit Record / වාර්තාව ඉදිරිපත් කරන්න</button>
+            <a href="dashboard.html" class="btn-cancel">Cancel / අවලංගු කරන්න</a>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '../index.html'
+      } else {
+        document.getElementById('page-content').style.display = 'block'
+        const phone = session.user.email.replace('@clarix.lk', '')
+        document.getElementById('lender-name').textContent = phone
+      }
+
+      window.submitRecord = async function() {
+
+        const borrower_nic = document.getElementById('borrower_nic').value.trim()
+        const borrower_name = document.getElementById('borrower_name').value.trim()
+        const borrower_phone = document.getElementById('borrower_phone').value.trim()
+        const borrower_district = document.getElementById('borrower_district').value
+        const record_type = document.getElementById('record_type').value
+        const collateral = document.getElementById('collateral').value
+        const loan_amount = document.getElementById('loan_amount').value
+        const outstanding = document.getElementById('outstanding').value
+        const installment_amount = document.getElementById('installment_amount').value
+        const installment_frequency = document.getElementById('installment_frequency').value
+        const total_installments = document.getElementById('total_installments').value
+        const installments_paid = document.getElementById('installments_paid').value
+        const next_due_date = document.getElementById('next_due_date').value
+        const notes = document.getElementById('notes').value.trim()
+        const consent = document.getElementById('consent').checked
+
+        const errorMsg = document.getElementById('error-msg')
+
+        if (!borrower_nic || !borrower_name || !record_type || !loan_amount || !outstanding) {
+          errorMsg.textContent = 'Please fill in all required fields. / කරුණාකර සියලු අවශ්‍ය තොරතුරු පුරවන්න.'
+          errorMsg.style.display = 'block'
+          return
+        }
+
+        if (!consent) {
+          errorMsg.textContent = 'You must confirm borrower consent before submitting. / ඉදිරිපත් කිරීමට පෙර ණය ගැනුම්කරුගේ කැමැත්ත තහවුරු කළ යුතුය.'
+          errorMsg.style.display = 'block'
+          return
+        }
+
+        const button = document.querySelector('.btn-primary')
+        button.textContent = 'Submitting...'
+        button.disabled = true
+        errorMsg.style.display = 'none'
+
+        const { data: lenderData } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', session.user.email.replace('@clarix.lk', ''))
+          .single()
+
+        if (!lenderData) {
+          errorMsg.textContent = 'Lender account not found. Please contact admin.'
+          errorMsg.style.display = 'block'
+          button.textContent = 'Submit Record / වාර්තාව ඉදිරිපත් කරන්න'
+          button.disabled = false
+          return
+        }
+
+        const { error } = await supabase
+          .from('records')
+          .insert([{
+            lender_id: lenderData.id,
+            borrower_nic,
+            borrower_name,
+            borrower_phone,
+            borrower_district,
+            record_type,
+            collateral,
+            loan_amount: parseFloat(loan_amount),
+            outstanding: parseFloat(outstanding),
+            installment_amount: installment_amount ? parseFloat(installment_amount) : null,
+            installment_frequency: installment_frequency || null,
+            total_installments: total_installments ? parseInt(total_installments) : null,
+            installments_paid: installments_paid ? parseInt(installments_paid) : 0,
+            next_due_date: next_due_date || null,
+            notes: notes || null,
+            status: record_type
+          }])
+
+        if (error) {
+          errorMsg.textContent = 'Error submitting record: ' + error.message
+          errorMsg.style.display = 'block'
+          button.textContent = 'Submit Record / වාර්තාව ඉදිරිපත් කරන්න'
+          button.disabled = false
+        } else {
+          window.location.href = 'dashboard.html?success=record'
+        }
+      }
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+    </script>
+
+  </body>
+</html>
