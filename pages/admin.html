@@ -32,7 +32,8 @@
   </head>
   <body>
 
-    <div class="topbar">
+    <div id="page-content" style="display:none;">
+<div class="topbar">
       <span class="logo-name" style="font-size:18px;">CLARIX — Admin</span>
       <div class="topbar-right">
         <button class="btn-signout" onclick="signOut()">Sign Out</button>
@@ -97,6 +98,8 @@ const { data: { session } } = await supabase.auth.getSession()
 
 if (!session || session.user.email !== ADMIN_EMAIL) {
   window.location.href = '../index.html'
+} else {
+  document.getElementById('page-content').style.display = 'block'
 }
 
       async function loadApplications() {
