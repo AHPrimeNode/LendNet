@@ -25,17 +25,17 @@
 
           <div class="field">
             <label>Full Name / සම්පූර්ණ නම *</label>
-            <input type="text" placeholder="Your full name" />
+            <input type="text" id="full_name" placeholder="Your full name" />
           </div>
 
           <div class="field">
             <label>Business Name / ව්‍යාපාර නම *</label>
-            <input type="text" placeholder="Your lending business name" />
+            <input type="text" id="business_name" placeholder="Your lending business name" />
           </div>
 
           <div class="field">
             <label>Business Type / ව්‍යාපාර වර්ගය *</label>
-            <select>
+            <select id="business_type">
               <option value="">Select your business type</option>
               <option>Private Moneylender / පෞද්ගලික මුදල් ණය දෙන්නා</option>
               <option>Gold Pawning Shop / රන් උකස් සාප්පුව</option>
@@ -47,7 +47,7 @@
 
           <div class="field">
             <label>District / දිස්ත්‍රික්කය *</label>
-            <select>
+            <select id="district">
               <option value="">Select your district</option>
               <option>Colombo / කොළඹ</option>
               <option>Gampaha / ගම්පහ</option>
@@ -79,12 +79,12 @@
 
           <div class="field">
             <label>Phone Number / දුරකථන අංකය *</label>
-            <input type="text" placeholder="07X XXX XXXX" />
+            <input type="text" id="phone" placeholder="07X XXX XXXX" />
           </div>
 
           <div class="field">
             <label>Approximate number of active loans / සක්‍රිය ණය ගණන *</label>
-            <select>
+            <select id="loan_count">
               <option value="">Select range</option>
               <option>1 — 25 loans</option>
               <option>26 — 100 loans</option>
@@ -95,8 +95,73 @@
 
           <div class="field">
             <label>How did you hear about Clarix? / ක්ලැරික්ස් ගැන දැනගත්තේ කෙසේද?</label>
-            <select>
+            <select id="heard_from">
               <option value="">Select an option</option>
               <option>Friend or colleague / මිතුරෙකු හෝ සගයෙකු</option>
               <option>Facebook / පේස්බුක්</option>
               <option>WhatsApp / වට්ස්ඇප්</option>
+              <option>Google search / ගූගල් සෙවුම</option>
+              <option>Microfinance association / මයික්‍රොෆිනෑන්ස් සංගමය</option>
+              <option>Other / වෙනත්</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" onclick="submitApplication()">Submit Application / අයදුම්පත යොමු කරන්න</button>
+
+          <div class="forgot">
+            <a href="../index.html">Already have an account? Sign in / දැනටමත් ගිණුමක් තිබේද?</a>
+          </div>
+
+        </div>
+
+        <p class="footer">Operated by Assert Holdings (Pvt) Ltd | clarix.lk</p>
+
+      </div>
+
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      window.submitApplication = async function() {
+
+        const full_name = document.getElementById('full_name').value
+        const business_name = document.getElementById('business_name').value
+        const business_type = document.getElementById('business_type').value
+        const district = document.getElementById('district').value
+        const phone = document.getElementById('phone').value
+        const loan_count = document.getElementById('loan_count').value
+        const heard_from = document.getElementById('heard_from').value
+
+        if (!full_name || !business_name || !business_type || !district || !phone || !loan_count) {
+          alert('Please fill in all required fields / කරුණාකර සියලු අවශ්‍ය තොරතුරු පුරවන්න')
+          return
+        }
+
+        const button = document.querySelector('.btn-primary')
+        button.textContent = 'Submitting...'
+        button.disabled = true
+
+        const { error } = await supabase
+          .from('applications')
+          .insert([{ full_name, business_name, business_type, district, phone, loan_count, heard_from }])
+
+        if (error) {
+          alert('Something went wrong. Please try again. / යමක් වැරදී ඇත. නැවත උත්සාහ කරන්න.')
+          button.textContent = 'Submit Application / අයදුම්පත යොමු කරන්න'
+          button.disabled = false
+        } else {
+          document.querySelector('.card').innerHTML = `
+            <div style="text-align: center; padding: 2rem 0;">
+              <p style="font-size: 40px; margin-bottom: 1rem;">✓</p>
+              <p style="font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 8px;">Application Received!</p>
+              <p style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Thank you. Our team will call you within 24 hours.</p>
+              <p style="font-size: 13px; color: #64748b;">ස්තූතියි. අපේ කණ්ඩායම පැය 24 ඇතුළත ඔබව අමතනු ඇත.</p>
+            </div>
+          `
+        }
+      }
+    </script>
+
+  </body>
+</html>
