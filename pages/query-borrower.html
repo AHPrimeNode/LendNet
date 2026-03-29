@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Query Borrower</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; }
+      .page { display: none; }
+
+      .search-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; }
+      .search-row { display: flex; gap: 8px; margin-top: 1rem; }
+      .search-row input { flex: 1; padding: 11px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #1e293b; outline: none; }
+      .search-row input:focus { border-color: #3b82f6; }
+      .search-row button { padding: 11px 24px; background: #1d4ed8; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+      .search-row button:hover { background: #1e40af; }
+
+      .result-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 1.5rem; }
+
+      .risk-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 16px; }
+      .risk-header.high { background: #fef2f2; border-bottom: 1px solid #fecaca; }
+      .risk-header.medium { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
+      .risk-header.low { background: #f0fdf4; border-bottom: 1px solid #bbf7d0; }
+
+      .risk-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold; flex-shrink: 0; }
+      .risk-icon.high { background: #dc2626; }
+      .risk-icon.medium { background: #ea580c; }
+      .risk-icon.low { background: #16a34a; }
+
+      .risk-label { font-size: 16px; font-weight: bold; }
+      .risk-label.high { color: #991b1b; }
+      .risk-label.medium { color: #9a3412; }
+      .risk-label.low { color: #166534; }
+
+      .risk-sublabel { font-size: 12px; margin-top: 2px; }
+      .risk-sublabel.high { color: #b91c1c; }
+      .risk-sublabel.medium { color: #c2410c; }
+      .risk-sublabel.low { color: #15803d; }
+
+      .risk-nic { margin-left: auto; text-align: right; }
+      .risk-nic p:first-child { font-size: 11px; color: #64748b; }
+      .risk-nic p:last-child { font-size: 14px; font-weight: bold; color: #1e293b; }
+
+      .summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; }
+      .summary-stat { background: #f8fafc; border-radius: 8px; padding: 0.75rem 1rem; }
+      .summary-stat-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+      .summary-stat-value { font-size: 20px; font-weight: bold; color: #1e293b; }
+      .summary-stat-value.danger { color: #dc2626; }
+      .summary-stat-value.success { color: #16a34a; }
+
+      .records-section { padding: 1.25rem 1.5rem; }
+      .records-section-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; }
+
+      .records-table { width: 100%; border-collapse: collapse; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden; font-size: 13px; }
+      .records-table th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; color: #64748b; font-weight: normal; border-bottom: 1px solid #e2e8f0; }
+      .records-table td { padding: 10px 12px; border-bottom: 1px solid #f8fafc; color: #1e293b; }
+      .records-table tr:last-child td { border-bottom: none; }
+
+      .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+      .badge-active { background: #dbeafe; color: #1d4ed8; }
+      .badge-defaulter { background: #fee2e2; color: #991b1b; }
+      .badge-partial_default { background: #fef3c7; color: #92400e; }
+      .badge-settled { background: #dcfce7; color: #166534; }
+      .badge-restructured { background: #f3e8ff; color: #6b21a8; }
+
+      .no-result { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 3rem; text-align: center; }
+      .no-result-icon { font-size: 40px; margin-bottom: 1rem; }
+      .no-result-title { font-size: 15px; font-weight: bold; color: #1e293b; margin-bottom: 4px; }
+      .no-result-sub { font-size: 13px; color: #64748b; }
+
+      .pdpa-notice { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 1rem; }
+
+      .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
+      .back-link:hover { color: #1d4ed8; }
+    </style>
+  </head>
+  <body>
+
+    <div id="page-content" style="display:none;">
+
+      <div class="topbar">
+        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <div class="topbar-right">
+          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
+          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+
+        <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
+
+        <h1 class="dash-title">Query a Borrower</h1>
+        <p class="dash-subtitle">Search the Clarix network by NIC number / ජාතික හැඳුනුම්පත් අංකයෙන් සොයන්න</p>
+
+        <div class="search-card">
+          <p style="font-size:13px;color:#475569;margin-bottom:4px;">Enter Borrower NIC / ජාතික හැඳුනුම්පත් අංකය</p>
+          <p style="font-size:11px;color:#94a3b8;">Search by NIC to see all records across the entire Clarix network</p>
+          <div class="search-row">
+            <input type="text" id="nic-input" placeholder="e.g. 199012345678 or 901234567V" />
+            <button onclick="queryBorrower()">Search / සොයන්න</button>
+          </div>
+        </div>
+
+        <div id="result-area"></div>
+
+        <p class="pdpa-notice">Every query is permanently logged in compliance with the Personal Data Protection Act (2022)</p>
+
+      </div>
+
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      let currentLenderId = null
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '../index.html'
+      } else {
+        document.getElementById('page-content').style.display = 'block'
+        const phone = session.user.email.replace('@clarix.lk', '')
+        document.getElementById('lender-name').textContent = phone
+
+        const { data: lenderData } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', phone)
+          .single()
+
+        if (lenderData) currentLenderId = lenderData.id
+      }
+
+      function calculateRisk(records) {
+        if (!records || records.length === 0) return { level: 'low', score: 10, label: 'LOW RISK', sublabel: 'No records found on network. New borrower.' }
+
+        let score = 0
+
+        const active = records.filter(r => r.status === 'active')
+        const defaulters = records.filter(r => r.status === 'defaulter')
+        const partialDefault = records.filter(r => r.status === 'partial_default')
+        const settled = records.filter(r => r.status === 'settled')
+
+        score += defaulters.length * 30
+        score += partialDefault.length * 20
+        score += active.length * 10
+        score -= settled.length * 5
+
+        const totalOutstanding = records.reduce((sum, r) => sum + (parseFloat(r.outstanding) || 0), 0)
+        if (totalOutstanding > 500000) score += 25
+        else if (totalOutstanding > 200000) score += 15
+        else if (totalOutstanding > 100000) score += 10
+
+        score = Math.min(100, Math.max(0, score))
+
+        if (defaulters.length > 0) {
+          return { level: 'high', score, label: 'HIGH RISK', sublabel: `Score: ${score}/100 — Default history found. Exercise extreme caution.` }
+        } else if (score >= 40) {
+          return { level: 'medium', score, label: 'MEDIUM RISK', sublabel: `Score: ${score}/100 — Multiple active loans. Proceed with caution.` }
+        } else {
+          return { level: 'low', score, label: 'LOW RISK', sublabel: `Score: ${score}/100 — No major risk signals found.` }
+        }
+      }
+
+      window.queryBorrower = async function() {
+        const nic = document.getElementById('nic-input').value.trim()
+        const resultArea = document.getElementById('result-area')
+
+        if (!nic) {
+          resultArea.innerHTML = '<p style="color:#dc2626;font-size:13px;">Please enter a NIC number.</p>'
+          return
+        }
+
+        resultArea.innerHTML = '<p style="font-size:13px;color:#64748b;">Searching network...</p>'
+
+        const { data: records, error } = await supabase
+          .from('records')
+          .select('*')
+          .eq('borrower_nic', nic)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          resultArea.innerHTML = '<p style="color:#dc2626;font-size:13px;">Error searching. Please try again.</p>'
+          return
+        }
+
+        if (currentLenderId) {
+          await supabase.from('queries').insert([{
+            lender_id: currentLenderId,
+            borrower_nic: nic,
+            search_type: 'nic'
+          }])
+        }
+
+        if (!records || records.length === 0) {
+          resultArea.innerHTML = `
+            <div class="no-result">
+              <div class="no-result-icon">✓</div>
+              <p class="no-result-title">No Records Found</p>
+              <p class="no-result-sub">NIC <strong>${nic}</strong> has no records on the Clarix network.</p>
+              <p class="no-result-sub" style="margin-top:4px;">This borrower appears to be new to the network.</p>
+            </div>
+          `
+          return
+        }
+
+        const risk = calculateRisk(records)
+        const activeRecords = records.filter(r => r.status === 'active')
+        const settledRecords = records.filter(r => r.status === 'settled')
+        const totalOutstanding = records.reduce((sum, r) => sum + (parseFloat(r.outstanding) || 0), 0)
+        const borrowerName = records[0].borrower_name
+
+        const riskIcons = { high: '!', medium: '!', low: '✓' }
+
+        resultArea.innerHTML = `
+          <div class="result-card">
+
+            <div class="risk-header ${risk.level}">
+              <div class="risk-icon ${risk.level}">${riskIcons[risk.level]}</div>
+              <div>
+                <p class="risk-label ${risk.level}">${risk.label}</p>
+                <p class="risk-sublabel ${risk.level}">${risk.sublabel}</p>
+              </div>
+              <div class="risk-nic">
+                <p>NIC</p>
+                <p>${nic}</p>
+              </div>
+            </div>
+
+            <div style="padding:1rem 1.5rem;border-bottom:1px solid #f1f5f9;background:#fafafa;">
+              <p style="font-size:13px;color:#1e293b;"><strong>Borrower:</strong> ${borrowerName}</p>
+            </div>
+
+            <div class="summary-stats">
+              <div class="summary-stat">
+                <p class="summary-stat-label">Active Loans</p>
+                <p class="summary-stat-value ${activeRecords.length > 1 ? 'danger' : ''}">${activeRecords.length}</p>
+              </div>
+              <div class="summary-stat">
+                <p class="summary-stat-label">Total Outstanding</p>
+                <p class="summary-stat-value danger">LKR ${totalOutstanding.toLocaleString()}</p>
+              </div>
+              <div class="summary-stat">
+                <p class="summary-stat-label">Settled Loans</p>
+                <p class="summary-stat-value success">${settledRecords.length}</p>
+              </div>
+            </div>
+
+            <div class="records-section">
+              <p class="records-section-title">All Records on Network (${records.length})</p>
+              <table class="records-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Loan Amount</th>
+                    <th>Outstanding</th>
+                    <th>Collateral</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${records.map(r => `
+                    <tr>
+                      <td>${r.record_type}</td>
+                      <td>LKR ${parseFloat(r.loan_amount).toLocaleString()}</td>
+                      <td style="color:${parseFloat(r.outstanding) > 0 ? '#dc2626' : '#16a34a'}">LKR ${parseFloat(r.outstanding).toLocaleString()}</td>
+                      <td>${r.collateral || 'none'}</td>
+                      <td><span class="badge badge-${r.status}">${r.status}</span></td>
+                      <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        `
+      }
+
+      document.getElementById('nic-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') queryBorrower()
+      })
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+    </script>
+
+  </body>
+</html>

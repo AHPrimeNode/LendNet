@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — My Records</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; }
+      .page { display: none; }
+
+      .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+      .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; }
+      .stat-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+      .stat-value { font-size: 22px; font-weight: bold; color: #1e293b; }
+
+      .toolbar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+      .search-input { padding: 9px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; flex: 1; min-width: 200px; }
+      .search-input:focus { border-color: #3b82f6; }
+      .filter-select { padding: 9px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #475569; outline: none; background: white; cursor: pointer; }
+
+      .table-wrap { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
+      th { background: #f1f5f9; padding: 11px 14px; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+      td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; vertical-align: middle; }
+      tr:last-child td { border-bottom: none; }
+      tr:hover td { background: #f8fafc; }
+
+      .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+      .badge-active { background: #dbeafe; color: #1d4ed8; }
+      .badge-defaulter { background: #fee2e2; color: #991b1b; }
+      .badge-partial_default { background: #fef3c7; color: #92400e; }
+      .badge-settled { background: #dcfce7; color: #166534; }
+      .badge-restructured { background: #f3e8ff; color: #6b21a8; }
+
+      .actions-cell { white-space: nowrap; }
+      .action-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; border: none; margin-right: 3px; }
+      .btn-view { background: #f1f5f9; color: #475569; }
+      .btn-view:hover { background: #e2e8f0; }
+      .btn-payment { background: #dbeafe; color: #1d4ed8; }
+      .btn-payment:hover { background: #bfdbfe; }
+      .btn-settle { background: #dcfce7; color: #166534; }
+      .btn-settle:hover { background: #bbf7d0; }
+
+      .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+
+      .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+      .modal { background: white; border-radius: 16px; padding: 2rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; margin: 1rem; }
+      .modal-title { font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 1.5rem; }
+      .modal-field { margin-bottom: 1rem; }
+      .modal-field label { font-size: 12px; color: #475569; display: block; margin-bottom: 5px; }
+      .modal-field input { width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; box-sizing: border-box; }
+      .modal-field input:focus { border-color: #3b82f6; }
+      .modal-actions { display: flex; gap: 8px; margin-top: 1.5rem; }
+      .modal-cancel { padding: 9px 16px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; cursor: pointer; }
+
+      .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+      .detail-row:last-child { border-bottom: none; }
+      .detail-label { color: #64748b; }
+      .detail-value { color: #1e293b; font-weight: 500; text-align: right; }
+
+      .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
+      .back-link:hover { color: #1d4ed8; }
+
+      .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+    </style>
+  </head>
+  <body>
+
+    <div id="page-content" style="display:none;">
+
+      <div class="topbar">
+        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <div class="topbar-right">
+          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
+          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+
+        <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
+
+        <div class="page-header">
+          <div>
+            <h1 class="dash-title">My Records</h1>
+            <p class="dash-subtitle">All borrower records you have submitted to the network</p>
+          </div>
+          <button class="btn-primary" style="padding:10px 20px;" onclick="window.location.href='submit-record.html'">+ Submit New Record</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <p class="stat-label">Total Records</p>
+            <p class="stat-value" id="stat-total">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Active Loans</p>
+            <p class="stat-value" id="stat-active">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Defaulters</p>
+            <p class="stat-value" id="stat-defaulters">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Total Outstanding</p>
+            <p class="stat-value" id="stat-outstanding" style="font-size:16px;margin-top:4px;">—</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="search-input" id="search-input" placeholder="Search by name or NIC..." oninput="filterRecords()" />
+          <select class="filter-select" id="filter-status" onchange="filterRecords()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="defaulter">Defaulter</option>
+            <option value="partial_default">Partial Default</option>
+            <option value="settled">Settled</option>
+            <option value="restructured">Restructured</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Borrower</th>
+                <th>NIC</th>
+                <th>Outstanding</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-list">
+              <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div id="modal-container"></div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      let allRecords = []
+      let currentLenderId = null
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '../index.html'
+      } else {
+        document.getElementById('page-content').style.display = 'block'
+        const phone = session.user.email.replace('@clarix.lk', '')
+        document.getElementById('lender-name').textContent = phone
+
+        const { data: lenderData } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', phone)
+          .single()
+
+        if (lenderData) {
+          currentLenderId = lenderData.id
+          loadRecords()
+        }
+      }
+
+      async function loadRecords() {
+        const { data, error } = await supabase
+          .from('records')
+          .select('*')
+          .eq('lender_id', currentLenderId)
+          .order('created_at', { ascending: false })
+
+        if (error || !data) {
+          document.getElementById('records-list').innerHTML = '<tr><td colspan="6" class="empty-state">Error loading records.</td></tr>'
+          return
+        }
+
+        allRecords = data
+        updateStats(data)
+        renderRecords(data)
+      }
+
+      function updateStats(data) {
+        document.getElementById('stat-total').textContent = data.length
+        document.getElementById('stat-active').textContent = data.filter(r => r.status === 'active').length
+        document.getElementById('stat-defaulters').textContent = data.filter(r => r.status === 'defaulter').length
+        const totalOutstanding = data.reduce((sum, r) => sum + (parseFloat(r.outstanding) || 0), 0)
+        document.getElementById('stat-outstanding').textContent = 'LKR ' + totalOutstanding.toLocaleString()
+      }
+
+      function renderRecords(data) {
+        const tbody = document.getElementById('records-list')
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No records yet. Submit your first record to get started.</td></tr>'
+          return
+        }
+
+        tbody.innerHTML = data.map(r => `
+          <tr>
+            <td><strong>${r.borrower_name}</strong></td>
+            <td style="font-family:monospace;font-size:12px;color:#64748b;">${r.borrower_nic}</td>
+            <td style="color:${parseFloat(r.outstanding) > 0 ? '#dc2626' : '#16a34a'};font-weight:500;">
+              LKR ${parseFloat(r.outstanding).toLocaleString()}
+            </td>
+            <td><span class="badge badge-${r.status}">${r.status}</span></td>
+            <td style="color:#64748b;">${new Date(r.created_at).toLocaleDateString()}</td>
+            <td class="actions-cell">
+              <button class="action-btn btn-view" onclick="viewRecord('${r.id}')">View</button>
+              ${r.status !== 'settled' ? `<button class="action-btn btn-payment" onclick="logPayment('${r.id}', ${r.outstanding})">Payment</button>` : ''}
+              ${r.status !== 'settled' ? `<button class="action-btn btn-settle" onclick="markSettled('${r.id}')">Settle</button>` : ''}
+            </td>
+          </tr>
+        `).join('')
+      }
+
+      window.filterRecords = function() {
+        const search = document.getElementById('search-input').value.toLowerCase()
+        const status = document.getElementById('filter-status').value
+
+        const filtered = allRecords.filter(r => {
+          const matchSearch = !search || r.borrower_name.toLowerCase().includes(search) || r.borrower_nic.toLowerCase().includes(search)
+          const matchStatus = !status || r.status === status
+          return matchSearch && matchStatus
+        })
+
+        renderRecords(filtered)
+      }
+
+window.viewRecord = async function(id) {
+  const r = allRecords.find(r => r.id === id)
+  if (!r) return
+
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('record_id', id)
+    .order('payment_date', { ascending: false })
+
+  const paymentsHtml = payments && payments.length > 0
+    ? payments.map(p => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+          <div>
+            <span style="color:#16a34a;font-weight:500;">LKR ${parseFloat(p.amount).toLocaleString()}</span>
+            <span style="color:#64748b;margin-left:8px;">${p.payment_date}</span>
+          </div>
+          <span style="color:#64748b;">${p.notes || '—'}</span>
+        </div>
+      `).join('')
+    : '<p style="font-size:12px;color:#94a3b8;padding:8px 0;">No payments logged yet.</p>'
+
+  document.getElementById('modal-container').innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal">
+        <p class="modal-title">Record Details — ${r.borrower_name}</p>
+        <div class="detail-row"><span class="detail-label">Borrower NIC</span><span class="detail-value">${r.borrower_nic}</span></div>
+        <div class="detail-row"><span class="detail-label">Borrower Name</span><span class="detail-value">${r.borrower_name}</span></div>
+        <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${r.borrower_phone || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">District</span><span class="detail-value">${r.borrower_district || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Record Type</span><span class="detail-value">${r.record_type}</span></div>
+        <div class="detail-row"><span class="detail-label">Loan Amount</span><span class="detail-value">LKR ${parseFloat(r.loan_amount).toLocaleString()}</span></div>
+        <div class="detail-row"><span class="detail-label">Outstanding</span><span class="detail-value" style="color:#dc2626;">LKR ${parseFloat(r.outstanding).toLocaleString()}</span></div>
+        <div class="detail-row"><span class="detail-label">Collateral</span><span class="detail-value">${r.collateral || 'none'}</span></div>
+        <div class="detail-row"><span class="detail-label">Installment</span><span class="detail-value">${r.installment_amount ? 'LKR ' + parseFloat(r.installment_amount).toLocaleString() + ' / ' + r.installment_frequency : '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${r.installments_paid || 0} of ${r.total_installments || '—'} paid</span></div>
+        <div class="detail-row"><span class="detail-label">Next Due Date</span><span class="detail-value">${r.next_due_date || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${r.status}">${r.status}</span></span></div>
+        <div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${r.notes || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">${new Date(r.created_at).toLocaleDateString()}</span></div>
+
+        <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:1.5rem;margin-bottom:0.5rem;">Payment History</p>
+        ${paymentsHtml}
+
+        <div class="modal-actions">
+          <button class="modal-cancel" onclick="document.getElementById('modal-container').innerHTML=''">Close</button>
+        </div>
+      </div>
+    </div>
+        `
+      }
+
+      window.logPayment = function(id, currentOutstanding) {
+        document.getElementById('modal-container').innerHTML = `
+          <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal">
+              <p class="modal-title">Log a Payment</p>
+              <div class="modal-field">
+                <label>Current Outstanding</label>
+                <input type="text" value="LKR ${parseFloat(currentOutstanding).toLocaleString()}" disabled style="background:#f8fafc;color:#64748b;" />
+              </div>
+              <div class="modal-field">
+                <label>Payment Amount (LKR) *</label>
+                <input type="number" id="payment-amount" placeholder="e.g. 5000" />
+              </div>
+              <div class="modal-field">
+                <label>Payment Date *</label>
+                <input type="date" id="payment-date" value="${new Date().toISOString().split('T')[0]}" />
+              </div>
+              <div class="modal-field">
+                <label>Notes</label>
+                <input type="text" id="payment-notes" placeholder="Optional notes" />
+              </div>
+              <div class="modal-actions">
+                <button class="btn-primary" style="padding:9px 16px;font-size:13px;" onclick="savePayment('${id}', ${currentOutstanding})">Save Payment</button>
+                <button class="modal-cancel" onclick="document.getElementById('modal-container').innerHTML=''">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      window.savePayment = async function(recordId, currentOutstanding) {
+        const amount = parseFloat(document.getElementById('payment-amount').value)
+        const date = document.getElementById('payment-date').value
+        const notes = document.getElementById('payment-notes').value
+
+        if (!amount || !date) {
+          alert('Please enter payment amount and date.')
+          return
+        }
+
+        if (amount > currentOutstanding) {
+          alert('Payment amount cannot exceed outstanding balance.')
+          return
+        }
+
+        const newOutstanding = currentOutstanding - amount
+        const newStatus = newOutstanding <= 0 ? 'settled' : 'active'
+
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert([{
+            record_id: recordId,
+            lender_id: currentLenderId,
+            amount,
+            payment_date: date,
+            notes: notes || null
+          }])
+
+        if (paymentError) {
+          alert('Error saving payment: ' + paymentError.message)
+          return
+        }
+
+        await supabase
+          .from('records')
+          .update({ outstanding: newOutstanding, status: newStatus })
+          .eq('id', recordId)
+
+        document.getElementById('modal-container').innerHTML = ''
+        loadRecords()
+      }
+
+      window.markSettled = async function(id) {
+        if (!confirm('Mark this record as fully settled?')) return
+
+        await supabase
+          .from('records')
+          .update({ outstanding: 0, status: 'settled' })
+          .eq('id', id)
+
+        loadRecords()
+      }
+
+      window.closeModal = function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
+          document.getElementById('modal-container').innerHTML = ''
+        }
+      }
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+    </script>
+
+  </body>
+</html>
