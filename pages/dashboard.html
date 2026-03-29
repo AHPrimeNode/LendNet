@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clarix — Dashboard</title>
     <link rel="stylesheet" href="../css/style.css" />
-<style>
-  body { background-color: #f8fafc; min-height: 100vh; }
-  .page { display: none; }
-</style>
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; }
+      .page { display: none; }
+    </style>
   </head>
   <body>
 
-    <div id="app" style="display:none;min-height:100vh;background:#f8fafc;">
+    <div id="app" style="display:none;">
 
       <div class="topbar">
         <span class="logo-name" style="font-size:18px;">CLARIX</span>
@@ -23,32 +23,33 @@
       </div>
 
       <div class="dashboard-content">
+
         <h1 class="dash-title">Dashboard</h1>
         <p class="dash-subtitle">Welcome to Clarix — Informal Lending Intelligence Network</p>
 
         <div class="dash-cards">
           <div class="dash-card">
             <p class="dash-card-label">Total Records</p>
-            <p class="dash-card-value">0</p>
+            <p class="dash-card-value" id="stat-total">—</p>
           </div>
           <div class="dash-card">
             <p class="dash-card-label">Active Loans</p>
-            <p class="dash-card-value">0</p>
+            <p class="dash-card-value" id="stat-active">—</p>
           </div>
           <div class="dash-card">
             <p class="dash-card-label">Defaulters</p>
-            <p class="dash-card-value">0</p>
+            <p class="dash-card-value" id="stat-defaulters">—</p>
           </div>
           <div class="dash-card">
             <p class="dash-card-label">Queries This Month</p>
-            <p class="dash-card-value">0</p>
+            <p class="dash-card-value" id="stat-queries">0</p>
           </div>
         </div>
 
         <div class="dash-actions">
           <button class="btn-primary">Query a Borrower</button>
           <button class="btn-secondary" onclick="window.location.href='submit-record.html'">Submit a Record</button>
-```</div>
+        </div>
 
       </div>
 
@@ -65,6 +66,25 @@
         document.getElementById('app').style.display = 'block'
         const phone = session.user.email.replace('@clarix.lk', '')
         document.getElementById('lender-name').textContent = phone
+
+        const { data: lenderData } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', phone)
+          .single()
+
+        if (lenderData) {
+          const { data: records } = await supabase
+            .from('records')
+            .select('*')
+            .eq('lender_id', lenderData.id)
+
+          if (records) {
+            document.getElementById('stat-total').textContent = records.length
+            document.getElementById('stat-active').textContent = records.filter(r => r.status === 'active').length
+            document.getElementById('stat-defaulters').textContent = records.filter(r => r.status === 'defaulter').length
+          }
+        }
       }
 
       window.signOut = async function() {
@@ -75,3 +95,4 @@
 
   </body>
 </html>
+```
