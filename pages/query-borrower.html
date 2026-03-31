@@ -73,6 +73,47 @@
 
       .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
       .back-link:hover { color: #1d4ed8; }
+
+      /* ── Flag button in table ── */
+      .btn-flag { padding: 4px 10px; font-size: 11px; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+      .btn-flag:hover { background: #fee2e2; }
+
+      /* ── Dispute Modal ── */
+      .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+      .modal-overlay.active { display: flex; }
+
+      .modal-box { background: white; border-radius: 12px; width: 480px; max-width: 90vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+
+      .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+      .modal-header h2 { font-size: 16px; color: #1e293b; margin: 0; }
+      .modal-close { background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+      .modal-close:hover { background: #f1f5f9; color: #64748b; }
+
+      .modal-body { padding: 1.5rem; }
+
+      .modal-record-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 12px; color: #475569; line-height: 1.8; }
+      .modal-record-info strong { color: #1e293b; }
+
+      .modal-label { font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 6px; display: block; }
+
+      .modal-select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; background: white; outline: none; margin-bottom: 1rem; }
+      .modal-select:focus { border-color: #3b82f6; }
+
+      .modal-textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; resize: vertical; min-height: 80px; margin-bottom: 1rem; font-family: inherit; box-sizing: border-box; }
+      .modal-textarea:focus { border-color: #3b82f6; }
+
+      .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+      .btn-modal-cancel { padding: 9px 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; color: #64748b; font-size: 13px; cursor: pointer; font-weight: bold; }
+      .btn-modal-cancel:hover { background: #f8fafc; }
+
+      .btn-modal-submit { padding: 9px 20px; border: none; border-radius: 8px; background: #dc2626; color: white; font-size: 13px; cursor: pointer; font-weight: bold; }
+      .btn-modal-submit:hover { background: #b91c1c; }
+      .btn-modal-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+
+      .modal-msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 1rem; }
+      .modal-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+      .modal-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     </style>
   </head>
   <body>
@@ -111,10 +152,42 @@
 
     </div>
 
+    <!-- ── Dispute Modal ── -->
+    <div class="modal-overlay" id="dispute-modal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>⚑ Flag This Record</h2>
+          <button class="modal-close" onclick="closeDisputeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="dispute-msg"></div>
+          <div id="dispute-record-info" class="modal-record-info"></div>
+          <div id="dispute-form-fields">
+            <label class="modal-label">Reason for flagging</label>
+            <select class="modal-select" id="dispute-reason">
+              <option value="">— Select a reason —</option>
+              <option value="wrong_nic">Wrong NIC — this record is linked to the wrong person</option>
+              <option value="wrong_amount">Wrong Amount — the loan or outstanding amount is incorrect</option>
+              <option value="already_settled">Already Settled — this loan has been fully repaid</option>
+              <option value="false_submission">False Submission — this record is fabricated or malicious</option>
+              <option value="identity_mismatch">Identity Mismatch — borrower name does not match NIC</option>
+            </select>
+            <label class="modal-label">Supporting details (optional)</label>
+            <textarea class="modal-textarea" id="dispute-notes" placeholder="Add any details that will help the admin review this dispute..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" id="dispute-footer">
+          <button class="btn-modal-cancel" onclick="closeDisputeModal()">Cancel</button>
+          <button class="btn-modal-submit" id="dispute-submit-btn" onclick="submitDispute()">Submit Dispute</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module">
       import { supabase } from '../js/supabase.js'
 
       let currentLenderId = null
+      let selectedRecordId = null
 
       const { data: { session } } = await supabase.auth.getSession()
 
@@ -260,6 +333,7 @@
                     <th>Collateral</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th style="text-align:center;">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -271,6 +345,7 @@
                       <td>${r.collateral || 'none'}</td>
                       <td><span class="badge badge-${r.status}">${r.status}</span></td>
                       <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                      <td style="text-align:center;"><button class="btn-flag" onclick="openDisputeModal('${r.id}', '${r.borrower_name}', '${r.borrower_nic}', '${r.record_type}', '${r.loan_amount}', '${r.status}')">⚑ Flag</button></td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -280,6 +355,115 @@
           </div>
         `
       }
+
+      /* ── Dispute Modal Functions ── */
+
+      window.openDisputeModal = function(recordId, name, nic, type, amount, status) {
+        selectedRecordId = recordId
+
+        // Show record details in the modal so the lender confirms which record they are flagging
+        document.getElementById('dispute-record-info').innerHTML = `
+          <strong>Borrower:</strong> ${name}<br>
+          <strong>NIC:</strong> ${nic}<br>
+          <strong>Record Type:</strong> ${type} &nbsp;|&nbsp; <strong>Loan Amount:</strong> LKR ${parseFloat(amount).toLocaleString()} &nbsp;|&nbsp; <strong>Status:</strong> ${status}
+        `
+
+        // Reset the form
+        document.getElementById('dispute-reason').value = ''
+        document.getElementById('dispute-notes').value = ''
+        document.getElementById('dispute-msg').innerHTML = ''
+        document.getElementById('dispute-form-fields').style.display = 'block'
+        document.getElementById('dispute-submit-btn').style.display = 'inline-block'
+        document.getElementById('dispute-submit-btn').disabled = false
+        document.getElementById('dispute-submit-btn').textContent = 'Submit Dispute'
+
+        // Show the modal
+        document.getElementById('dispute-modal').classList.add('active')
+      }
+
+      window.closeDisputeModal = function() {
+        document.getElementById('dispute-modal').classList.remove('active')
+        selectedRecordId = null
+      }
+
+      window.submitDispute = async function() {
+        const reason = document.getElementById('dispute-reason').value
+        const notes = document.getElementById('dispute-notes').value.trim()
+        const msgArea = document.getElementById('dispute-msg')
+        const submitBtn = document.getElementById('dispute-submit-btn')
+
+        // Validate: reason is required
+        if (!reason) {
+          msgArea.innerHTML = '<div class="modal-msg error">Please select a reason for flagging this record.</div>'
+          return
+        }
+
+        // Validate: must be logged in as a lender
+        if (!currentLenderId) {
+          msgArea.innerHTML = '<div class="modal-msg error">Your lender account could not be verified. Please sign out and sign in again.</div>'
+          return
+        }
+
+        // Disable button to prevent double-click
+        submitBtn.disabled = true
+        submitBtn.textContent = 'Submitting...'
+        msgArea.innerHTML = ''
+
+        // Check if this lender already flagged this same record
+        const { data: existing, error: checkError } = await supabase
+          .from('disputes')
+          .select('id')
+          .eq('record_id', selectedRecordId)
+          .eq('raised_by', currentLenderId)
+
+        if (checkError) {
+          msgArea.innerHTML = '<div class="modal-msg error">Something went wrong checking for existing disputes. Please try again.</div>'
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Submit Dispute'
+          return
+        }
+
+        if (existing && existing.length > 0) {
+          msgArea.innerHTML = '<div class="modal-msg error">You have already flagged this record. The admin will review your existing dispute.</div>'
+          submitBtn.style.display = 'none'
+          return
+        }
+
+        // Insert the dispute
+        const { error: insertError } = await supabase
+          .from('disputes')
+          .insert([{
+            record_id: selectedRecordId,
+            raised_by: currentLenderId,
+            reason: reason,
+            notes: notes || null,
+            status: 'pending'
+          }])
+
+        if (insertError) {
+          msgArea.innerHTML = '<div class="modal-msg error">Failed to submit dispute. Please try again. (' + insertError.message + ')</div>'
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Submit Dispute'
+          return
+        }
+
+        // Log to audit trail
+        await supabase.from('audit_log').insert([{
+          action: 'dispute_raised',
+          performed_by: currentLenderId,
+          details: 'Dispute raised on record ' + selectedRecordId + ' — Reason: ' + reason
+        }])
+
+        // Show success — hide form fields
+        msgArea.innerHTML = '<div class="modal-msg success">✓ Dispute submitted successfully. The admin will review this record and take action.</div>'
+        document.getElementById('dispute-form-fields').style.display = 'none'
+        submitBtn.style.display = 'none'
+      }
+
+      // Close modal when clicking outside the box
+      document.getElementById('dispute-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeDisputeModal()
+      })
 
       document.getElementById('nic-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') queryBorrower()
