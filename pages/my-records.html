@@ -32,6 +32,9 @@
       .badge-partial_default { background: #fef3c7; color: #92400e; }
       .badge-settled { background: #dcfce7; color: #166534; }
       .badge-restructured { background: #f3e8ff; color: #6b21a8; }
+      .badge-pending { background: #fef3c7; color: #92400e; }
+      .badge-resolved { background: #dcfce7; color: #166534; }
+      .badge-rejected { background: #fee2e2; color: #991b1b; }
 
       .actions-cell { white-space: nowrap; }
       .action-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; border: none; margin-right: 3px; }
@@ -63,6 +66,23 @@
       .back-link:hover { color: #1d4ed8; }
 
       .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+
+      /* ── Tab Navigation ── */
+      .records-tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: #f1f5f9; padding: 4px; border-radius: 10px; width: fit-content; }
+      .records-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; color: #64748b; background: transparent; border: none; cursor: pointer; }
+      .records-tab:hover { color: #1e293b; }
+      .records-tab.active { background: white; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      .records-tab .tab-count { display: inline-block; background: #e2e8f0; color: #64748b; font-size: 10px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: bold; }
+      .records-tab.active .tab-count { background: #dbeafe; color: #1d4ed8; }
+      .records-tab .tab-count.alert { background: #fef3c7; color: #92400e; }
+
+      .tab-section { display: none; }
+      .tab-section.active { display: block; }
+
+      /* ── Dispute detail in modal ── */
+      .dispute-detail-group { margin-bottom: 1rem; }
+      .dispute-detail-label { font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+      .dispute-detail-value { font-size: 13px; color: #1e293b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.8rem; line-height: 1.6; }
     </style>
   </head>
   <body>
@@ -81,61 +101,125 @@
 
         <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
 
-        <div class="page-header">
-          <div>
-            <h1 class="dash-title">My Records</h1>
-            <p class="dash-subtitle">All borrower records you have submitted to the network</p>
-          </div>
-          <button class="btn-primary" style="padding:10px 20px;" onclick="window.location.href='submit-record.html'">+ Submit New Record</button>
+        <!-- ── Tab Navigation ── -->
+        <div class="records-tabs">
+          <button class="records-tab active" onclick="switchTab('records')">My Records <span class="tab-count" id="tab-count-records">0</span></button>
+          <button class="records-tab" onclick="switchTab('disputes')">My Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
         </div>
 
-        <div class="stats-row">
-          <div class="stat-card">
-            <p class="stat-label">Total Records</p>
-            <p class="stat-value" id="stat-total">—</p>
+        <!-- ══════════════════════════════════════════ -->
+        <!-- ── MY RECORDS TAB (unchanged)           ── -->
+        <!-- ══════════════════════════════════════════ -->
+        <div class="tab-section active" id="tab-records">
+
+          <div class="page-header">
+            <div>
+              <h1 class="dash-title">My Records</h1>
+              <p class="dash-subtitle">All borrower records you have submitted to the network</p>
+            </div>
+            <button class="btn-primary" style="padding:10px 20px;" onclick="window.location.href='submit-record.html'">+ Submit New Record</button>
           </div>
-          <div class="stat-card">
-            <p class="stat-label">Active Loans</p>
-            <p class="stat-value" id="stat-active">—</p>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <p class="stat-label">Total Records</p>
+              <p class="stat-value" id="stat-total">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Active Loans</p>
+              <p class="stat-value" id="stat-active">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Defaulters</p>
+              <p class="stat-value" id="stat-defaulters">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Total Outstanding</p>
+              <p class="stat-value" id="stat-outstanding" style="font-size:16px;margin-top:4px;">—</p>
+            </div>
           </div>
-          <div class="stat-card">
-            <p class="stat-label">Defaulters</p>
-            <p class="stat-value" id="stat-defaulters">—</p>
+
+          <div class="toolbar">
+            <input class="search-input" id="search-input" placeholder="Search by name or NIC..." oninput="filterRecords()" />
+            <select class="filter-select" id="filter-status" onchange="filterRecords()">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="defaulter">Defaulter</option>
+              <option value="partial_default">Partial Default</option>
+              <option value="settled">Settled</option>
+              <option value="restructured">Restructured</option>
+            </select>
           </div>
-          <div class="stat-card">
-            <p class="stat-label">Total Outstanding</p>
-            <p class="stat-value" id="stat-outstanding" style="font-size:16px;margin-top:4px;">—</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Borrower</th>
+                  <th>NIC</th>
+                  <th>Outstanding</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="records-list">
+                <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
+
         </div>
 
-        <div class="toolbar">
-          <input class="search-input" id="search-input" placeholder="Search by name or NIC..." oninput="filterRecords()" />
-          <select class="filter-select" id="filter-status" onchange="filterRecords()">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="defaulter">Defaulter</option>
-            <option value="partial_default">Partial Default</option>
-            <option value="settled">Settled</option>
-            <option value="restructured">Restructured</option>
-          </select>
-        </div>
+        <!-- ══════════════════════════════════════════ -->
+        <!-- ── MY DISPUTES TAB (new)                ── -->
+        <!-- ══════════════════════════════════════════ -->
+        <div class="tab-section" id="tab-disputes">
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Borrower</th>
-                <th>NIC</th>
-                <th>Outstanding</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="records-list">
-              <tr><td colspan="6" class="empty-state">Loading...</td></tr>
-            </tbody>
-          </table>
+          <div class="page-header">
+            <div>
+              <h1 class="dash-title">My Disputes</h1>
+              <p class="dash-subtitle">Records you have flagged — track the status of each dispute</p>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <p class="stat-label">Total Disputes</p>
+              <p class="stat-value" id="stat-disputes-total">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Pending</p>
+              <p class="stat-value" id="stat-disputes-pending" style="color:#92400e;">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Resolved</p>
+              <p class="stat-value" id="stat-disputes-resolved" style="color:#16a34a;">—</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Rejected</p>
+              <p class="stat-value" id="stat-disputes-rejected" style="color:#dc2626;">—</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Borrower</th>
+                  <th>NIC</th>
+                  <th>Reason</th>
+                  <th>Date Filed</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="disputes-list">
+                <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>
 
       </div>
@@ -149,6 +233,8 @@
 
       let allRecords = []
       let currentLenderId = null
+      let allMyDisputes = []
+      let allMyDisputeRecords = {}
 
       const { data: { session } } = await supabase.auth.getSession()
 
@@ -168,8 +254,24 @@
         if (lenderData) {
           currentLenderId = lenderData.id
           loadRecords()
+          loadMyDisputes()
         }
       }
+
+      /* ══════════════════════════════════════════ */
+      /* ── TAB SWITCHING                        ── */
+      /* ══════════════════════════════════════════ */
+
+      window.switchTab = function(tab) {
+        document.querySelectorAll('.records-tab').forEach(btn => btn.classList.remove('active'))
+        event.currentTarget.classList.add('active')
+        document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
+        document.getElementById('tab-' + tab).classList.add('active')
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── MY RECORDS (unchanged logic)         ── */
+      /* ══════════════════════════════════════════ */
 
       async function loadRecords() {
         const { data, error } = await supabase
@@ -186,6 +288,9 @@
         allRecords = data
         updateStats(data)
         renderRecords(data)
+
+        // Update tab count
+        document.getElementById('tab-count-records').textContent = data.length
       }
 
       function updateStats(data) {
@@ -235,55 +340,55 @@
         renderRecords(filtered)
       }
 
-window.viewRecord = async function(id) {
-  const r = allRecords.find(r => r.id === id)
-  if (!r) return
+      window.viewRecord = async function(id) {
+        const r = allRecords.find(r => r.id === id)
+        if (!r) return
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('record_id', id)
-    .order('payment_date', { ascending: false })
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('record_id', id)
+          .order('payment_date', { ascending: false })
 
-  const paymentsHtml = payments && payments.length > 0
-    ? payments.map(p => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
-          <div>
-            <span style="color:#16a34a;font-weight:500;">LKR ${parseFloat(p.amount).toLocaleString()}</span>
-            <span style="color:#64748b;margin-left:8px;">${p.payment_date}</span>
+        const paymentsHtml = payments && payments.length > 0
+          ? payments.map(p => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+                <div>
+                  <span style="color:#16a34a;font-weight:500;">LKR ${parseFloat(p.amount).toLocaleString()}</span>
+                  <span style="color:#64748b;margin-left:8px;">${p.payment_date}</span>
+                </div>
+                <span style="color:#64748b;">${p.notes || '—'}</span>
+              </div>
+            `).join('')
+          : '<p style="font-size:12px;color:#94a3b8;padding:8px 0;">No payments logged yet.</p>'
+
+        document.getElementById('modal-container').innerHTML = `
+          <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal">
+              <p class="modal-title">Record Details — ${r.borrower_name}</p>
+              <div class="detail-row"><span class="detail-label">Borrower NIC</span><span class="detail-value">${r.borrower_nic}</span></div>
+              <div class="detail-row"><span class="detail-label">Borrower Name</span><span class="detail-value">${r.borrower_name}</span></div>
+              <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${r.borrower_phone || '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">District</span><span class="detail-value">${r.borrower_district || '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">Record Type</span><span class="detail-value">${r.record_type}</span></div>
+              <div class="detail-row"><span class="detail-label">Loan Amount</span><span class="detail-value">LKR ${parseFloat(r.loan_amount).toLocaleString()}</span></div>
+              <div class="detail-row"><span class="detail-label">Outstanding</span><span class="detail-value" style="color:#dc2626;">LKR ${parseFloat(r.outstanding).toLocaleString()}</span></div>
+              <div class="detail-row"><span class="detail-label">Collateral</span><span class="detail-value">${r.collateral || 'none'}</span></div>
+              <div class="detail-row"><span class="detail-label">Installment</span><span class="detail-value">${r.installment_amount ? 'LKR ' + parseFloat(r.installment_amount).toLocaleString() + ' / ' + r.installment_frequency : '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${r.installments_paid || 0} of ${r.total_installments || '—'} paid</span></div>
+              <div class="detail-row"><span class="detail-label">Next Due Date</span><span class="detail-value">${r.next_due_date || '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${r.status}">${r.status}</span></span></div>
+              <div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${r.notes || '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">${new Date(r.created_at).toLocaleDateString()}</span></div>
+
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:1.5rem;margin-bottom:0.5rem;">Payment History</p>
+              ${paymentsHtml}
+
+              <div class="modal-actions">
+                <button class="modal-cancel" onclick="document.getElementById('modal-container').innerHTML=''">Close</button>
+              </div>
+            </div>
           </div>
-          <span style="color:#64748b;">${p.notes || '—'}</span>
-        </div>
-      `).join('')
-    : '<p style="font-size:12px;color:#94a3b8;padding:8px 0;">No payments logged yet.</p>'
-
-  document.getElementById('modal-container').innerHTML = `
-    <div class="modal-overlay" onclick="closeModal(event)">
-      <div class="modal">
-        <p class="modal-title">Record Details — ${r.borrower_name}</p>
-        <div class="detail-row"><span class="detail-label">Borrower NIC</span><span class="detail-value">${r.borrower_nic}</span></div>
-        <div class="detail-row"><span class="detail-label">Borrower Name</span><span class="detail-value">${r.borrower_name}</span></div>
-        <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${r.borrower_phone || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">District</span><span class="detail-value">${r.borrower_district || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Record Type</span><span class="detail-value">${r.record_type}</span></div>
-        <div class="detail-row"><span class="detail-label">Loan Amount</span><span class="detail-value">LKR ${parseFloat(r.loan_amount).toLocaleString()}</span></div>
-        <div class="detail-row"><span class="detail-label">Outstanding</span><span class="detail-value" style="color:#dc2626;">LKR ${parseFloat(r.outstanding).toLocaleString()}</span></div>
-        <div class="detail-row"><span class="detail-label">Collateral</span><span class="detail-value">${r.collateral || 'none'}</span></div>
-        <div class="detail-row"><span class="detail-label">Installment</span><span class="detail-value">${r.installment_amount ? 'LKR ' + parseFloat(r.installment_amount).toLocaleString() + ' / ' + r.installment_frequency : '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${r.installments_paid || 0} of ${r.total_installments || '—'} paid</span></div>
-        <div class="detail-row"><span class="detail-label">Next Due Date</span><span class="detail-value">${r.next_due_date || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${r.status}">${r.status}</span></span></div>
-        <div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${r.notes || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">${new Date(r.created_at).toLocaleDateString()}</span></div>
-
-        <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:1.5rem;margin-bottom:0.5rem;">Payment History</p>
-        ${paymentsHtml}
-
-        <div class="modal-actions">
-          <button class="modal-cancel" onclick="document.getElementById('modal-container').innerHTML=''">Close</button>
-        </div>
-      </div>
-    </div>
         `
       }
 
@@ -369,6 +474,169 @@ window.viewRecord = async function(id) {
 
         loadRecords()
       }
+
+      /* ══════════════════════════════════════════ */
+      /* ── MY DISPUTES (new)                    ── */
+      /* ══════════════════════════════════════════ */
+
+      const reasonLabels = {
+        'wrong_nic': 'Wrong NIC',
+        'wrong_amount': 'Wrong Amount',
+        'already_settled': 'Already Settled',
+        'false_submission': 'False Submission',
+        'identity_mismatch': 'Identity Mismatch'
+      }
+
+      const reasonLabelsFull = {
+        'wrong_nic': 'Wrong NIC — this record is linked to the wrong person',
+        'wrong_amount': 'Wrong Amount — the loan or outstanding amount is incorrect',
+        'already_settled': 'Already Settled — this loan has been fully repaid',
+        'false_submission': 'False Submission — this record is fabricated or malicious',
+        'identity_mismatch': 'Identity Mismatch — borrower name does not match NIC'
+      }
+
+      async function loadMyDisputes() {
+        const tbody = document.getElementById('disputes-list')
+
+        // Fetch only disputes raised by this lender
+        const { data: disputes, error } = await supabase
+          .from('disputes')
+          .select('*')
+          .eq('raised_by', currentLenderId)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading disputes.</td></tr>'
+          return
+        }
+
+        if (!disputes || disputes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">You have not flagged any records yet.</td></tr>'
+          document.getElementById('stat-disputes-total').textContent = '0'
+          document.getElementById('stat-disputes-pending').textContent = '0'
+          document.getElementById('stat-disputes-resolved').textContent = '0'
+          document.getElementById('stat-disputes-rejected').textContent = '0'
+          document.getElementById('tab-count-disputes').textContent = '0'
+          return
+        }
+
+        allMyDisputes = disputes
+
+        // Fetch the related records to show borrower name and NIC
+        const recordIds = [...new Set(disputes.map(d => d.record_id))]
+        const { data: records } = await supabase
+          .from('records')
+          .select('id, borrower_name, borrower_nic, record_type, loan_amount, outstanding, status')
+          .in('id', recordIds)
+
+        allMyDisputeRecords = {}
+        if (records) {
+          records.forEach(r => { allMyDisputeRecords[r.id] = r })
+        }
+
+        // Update stats
+        const pendingCount = disputes.filter(d => d.status === 'pending').length
+        document.getElementById('stat-disputes-total').textContent = disputes.length
+        document.getElementById('stat-disputes-pending').textContent = pendingCount
+        document.getElementById('stat-disputes-resolved').textContent = disputes.filter(d => d.status === 'resolved').length
+        document.getElementById('stat-disputes-rejected').textContent = disputes.filter(d => d.status === 'rejected').length
+        document.getElementById('tab-count-disputes').textContent = disputes.length
+        if (pendingCount > 0) document.getElementById('tab-count-disputes').classList.add('alert')
+
+        // Render table
+        tbody.innerHTML = disputes.map(d => {
+          const record = allMyDisputeRecords[d.record_id] || {}
+
+          return `
+            <tr>
+              <td><strong>${record.borrower_name || 'Record removed'}</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:#64748b;">${record.borrower_nic || '—'}</td>
+              <td>${reasonLabels[d.reason] || d.reason}</td>
+              <td style="color:#64748b;">${new Date(d.created_at).toLocaleDateString()}</td>
+              <td><span class="badge badge-${d.status}">${d.status}</span></td>
+              <td>
+                <button class="action-btn btn-view" onclick="viewDispute('${d.id}')">View</button>
+              </td>
+            </tr>
+          `
+        }).join('')
+      }
+
+      /* ── View Dispute Detail Modal ── */
+
+      window.viewDispute = function(disputeId) {
+        const dispute = allMyDisputes.find(d => d.id === disputeId)
+        if (!dispute) return
+
+        const record = allMyDisputeRecords[dispute.record_id] || {}
+
+        // Status explanation for the lender
+        let statusExplanation = ''
+        if (dispute.status === 'pending') {
+          statusExplanation = '<span style="color:#92400e;">Your dispute is being reviewed by the Clarix admin team.</span>'
+        } else if (dispute.status === 'resolved') {
+          statusExplanation = '<span style="color:#16a34a;">Your dispute has been reviewed and the record has been corrected or removed.</span>'
+        } else if (dispute.status === 'rejected') {
+          statusExplanation = '<span style="color:#dc2626;">Your dispute was reviewed and the admin determined the record is accurate. No changes were made.</span>'
+        }
+
+        // Show record info — if record was deleted, show a message
+        let recordHtml = ''
+        if (record.borrower_name) {
+          recordHtml = `
+            <strong>Borrower:</strong> ${record.borrower_name}<br>
+            <strong>NIC:</strong> ${record.borrower_nic}<br>
+            <strong>Type:</strong> ${record.record_type || '—'} &nbsp;|&nbsp; <strong>Loan:</strong> LKR ${record.loan_amount ? parseFloat(record.loan_amount).toLocaleString() : '—'} &nbsp;|&nbsp; <strong>Outstanding:</strong> LKR ${record.outstanding ? parseFloat(record.outstanding).toLocaleString() : '—'}<br>
+            <strong>Record Status:</strong> ${record.status || '—'}
+          `
+        } else {
+          recordHtml = '<span style="color:#94a3b8;">This record has been removed from the network as a result of this dispute.</span>'
+        }
+
+        document.getElementById('modal-container').innerHTML = `
+          <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal">
+              <p class="modal-title">⚑ Dispute Details</p>
+
+              <div class="dispute-detail-group">
+                <p class="dispute-detail-label">Flagged Record</p>
+                <div class="dispute-detail-value">${recordHtml}</div>
+              </div>
+
+              <div class="dispute-detail-group">
+                <p class="dispute-detail-label">Reason</p>
+                <div class="dispute-detail-value">${reasonLabelsFull[dispute.reason] || dispute.reason}</div>
+              </div>
+
+              <div class="dispute-detail-group">
+                <p class="dispute-detail-label">Your Notes</p>
+                <div class="dispute-detail-value">${dispute.notes || '<span style="color:#94a3b8;">No notes provided</span>'}</div>
+              </div>
+
+              <div class="dispute-detail-group">
+                <p class="dispute-detail-label">Date Filed</p>
+                <div class="dispute-detail-value">${new Date(dispute.created_at).toLocaleString()}</div>
+              </div>
+
+              <div class="dispute-detail-group">
+                <p class="dispute-detail-label">Status</p>
+                <div class="dispute-detail-value">
+                  <span class="badge badge-${dispute.status}">${dispute.status}</span>
+                  <div style="margin-top:8px;font-size:12px;">${statusExplanation}</div>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button class="modal-cancel" onclick="document.getElementById('modal-container').innerHTML=''">Close</button>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── SHARED                               ── */
+      /* ══════════════════════════════════════════ */
 
       window.closeModal = function(e) {
         if (e.target.classList.contains('modal-overlay')) {
