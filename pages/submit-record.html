@@ -159,6 +159,10 @@
               <label>Next Due Date / ඊළඟ ගෙවීමේ දිනය</label>
               <input type="date" id="next_due_date" />
             </div>
+            <div class="field">
+              <label>Last Repayment Date / අවසන් ගෙවීමේ දිනය</label>
+              <input type="date" id="last_repayment_date" />
+            </div>
           </div>
 
           <div class="section-gap">
@@ -218,6 +222,7 @@
         const total_installments = document.getElementById('total_installments').value
         const installments_paid = document.getElementById('installments_paid').value
         const next_due_date = document.getElementById('next_due_date').value
+        const last_repayment_date = document.getElementById('last_repayment_date').value
         const notes = document.getElementById('notes').value.trim()
         const consent = document.getElementById('consent').checked
 
@@ -271,6 +276,7 @@
             total_installments: total_installments ? parseInt(total_installments) : null,
             installments_paid: installments_paid ? parseInt(installments_paid) : 0,
             next_due_date: next_due_date || null,
+            last_repayment_date: last_repayment_date || null,
             notes: notes || null,
             status: record_type
           }])

@@ -108,7 +108,7 @@
         </div>
 
         <!-- ══════════════════════════════════════════ -->
-        <!-- ── MY RECORDS TAB (unchanged)           ── -->
+        <!-- ── MY RECORDS TAB                       ── -->
         <!-- ══════════════════════════════════════════ -->
         <div class="tab-section active" id="tab-records">
 
@@ -172,7 +172,7 @@
         </div>
 
         <!-- ══════════════════════════════════════════ -->
-        <!-- ── MY DISPUTES TAB (new)                ── -->
+        <!-- ── MY DISPUTES TAB                      ── -->
         <!-- ══════════════════════════════════════════ -->
         <div class="tab-section" id="tab-disputes">
 
@@ -270,7 +270,7 @@
       }
 
       /* ══════════════════════════════════════════ */
-      /* ── MY RECORDS (unchanged logic)         ── */
+      /* ── MY RECORDS                           ── */
       /* ══════════════════════════════════════════ */
 
       async function loadRecords() {
@@ -289,7 +289,6 @@
         updateStats(data)
         renderRecords(data)
 
-        // Update tab count
         document.getElementById('tab-count-records').textContent = data.length
       }
 
@@ -377,6 +376,7 @@
               <div class="detail-row"><span class="detail-label">Installment</span><span class="detail-value">${r.installment_amount ? 'LKR ' + parseFloat(r.installment_amount).toLocaleString() + ' / ' + r.installment_frequency : '—'}</span></div>
               <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${r.installments_paid || 0} of ${r.total_installments || '—'} paid</span></div>
               <div class="detail-row"><span class="detail-label">Next Due Date</span><span class="detail-value">${r.next_due_date || '—'}</span></div>
+              <div class="detail-row"><span class="detail-label">Last Repayment Date</span><span class="detail-value" style="color:${r.last_repayment_date ? '#1e293b' : '#94a3b8'};">${r.last_repayment_date || 'No payment recorded'}</span></div>
               <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${r.status}">${r.status}</span></span></div>
               <div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${r.notes || '—'}</span></div>
               <div class="detail-row"><span class="detail-label">Submitted</span><span class="detail-value">${new Date(r.created_at).toLocaleDateString()}</span></div>
@@ -455,9 +455,14 @@
           return
         }
 
+        // Update outstanding, status, AND last_repayment_date automatically
         await supabase
           .from('records')
-          .update({ outstanding: newOutstanding, status: newStatus })
+          .update({
+            outstanding: newOutstanding,
+            status: newStatus,
+            last_repayment_date: date
+          })
           .eq('id', recordId)
 
         document.getElementById('modal-container').innerHTML = ''
@@ -469,14 +474,18 @@
 
         await supabase
           .from('records')
-          .update({ outstanding: 0, status: 'settled' })
+          .update({
+            outstanding: 0,
+            status: 'settled',
+            last_repayment_date: new Date().toISOString().split('T')[0]
+          })
           .eq('id', id)
 
         loadRecords()
       }
 
       /* ══════════════════════════════════════════ */
-      /* ── MY DISPUTES (new)                    ── */
+      /* ── MY DISPUTES                          ── */
       /* ══════════════════════════════════════════ */
 
       const reasonLabels = {
@@ -498,7 +507,6 @@
       async function loadMyDisputes() {
         const tbody = document.getElementById('disputes-list')
 
-        // Fetch only disputes raised by this lender
         const { data: disputes, error } = await supabase
           .from('disputes')
           .select('*')
@@ -522,7 +530,6 @@
 
         allMyDisputes = disputes
 
-        // Fetch the related records to show borrower name and NIC
         const recordIds = [...new Set(disputes.map(d => d.record_id))]
         const { data: records } = await supabase
           .from('records')
@@ -534,7 +541,6 @@
           records.forEach(r => { allMyDisputeRecords[r.id] = r })
         }
 
-        // Update stats
         const pendingCount = disputes.filter(d => d.status === 'pending').length
         document.getElementById('stat-disputes-total').textContent = disputes.length
         document.getElementById('stat-disputes-pending').textContent = pendingCount
@@ -543,7 +549,6 @@
         document.getElementById('tab-count-disputes').textContent = disputes.length
         if (pendingCount > 0) document.getElementById('tab-count-disputes').classList.add('alert')
 
-        // Render table
         tbody.innerHTML = disputes.map(d => {
           const record = allMyDisputeRecords[d.record_id] || {}
 
@@ -562,15 +567,12 @@
         }).join('')
       }
 
-      /* ── View Dispute Detail Modal ── */
-
       window.viewDispute = function(disputeId) {
         const dispute = allMyDisputes.find(d => d.id === disputeId)
         if (!dispute) return
 
         const record = allMyDisputeRecords[dispute.record_id] || {}
 
-        // Status explanation for the lender
         let statusExplanation = ''
         if (dispute.status === 'pending') {
           statusExplanation = '<span style="color:#92400e;">Your dispute is being reviewed by the Clarix admin team.</span>'
@@ -580,7 +582,6 @@
           statusExplanation = '<span style="color:#dc2626;">Your dispute was reviewed and the admin determined the record is accurate. No changes were made.</span>'
         }
 
-        // Show record info — if record was deleted, show a message
         let recordHtml = ''
         if (record.borrower_name) {
           recordHtml = `

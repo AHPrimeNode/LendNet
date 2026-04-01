@@ -31,7 +31,6 @@
       .stat-value { font-size: 22px; font-weight: bold; color: #1e293b; }
       .empty-state { text-align: center; color: #64748b; padding: 3rem; }
 
-      /* ── Tab Navigation ── */
       .admin-tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: #f1f5f9; padding: 4px; border-radius: 10px; width: fit-content; }
       .admin-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; color: #64748b; background: transparent; border: none; cursor: pointer; }
       .admin-tab:hover { color: #1e293b; }
@@ -43,13 +42,11 @@
       .tab-section { display: none; }
       .tab-section.active { display: block; }
 
-      /* ── Dispute action buttons ── */
       .btn-view { background: white; color: #1d4ed8; border: 1px solid #1d4ed8; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
       .btn-view:hover { background: #eff6ff; }
       .btn-resolve { background: #16a34a; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 6px; }
       .btn-resolve:hover { background: #15803d; }
 
-      /* ── Modal Styles ── */
       .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
       .modal-overlay.active { display: flex; }
 
@@ -77,7 +74,6 @@
       .btn-modal-reject { padding: 9px 20px; border: none; border-radius: 8px; background: #dc2626; color: white; font-size: 13px; cursor: pointer; font-weight: bold; }
       .btn-modal-reject:hover { background: #b91c1c; }
 
-      /* ── Resolution Modal Form Styles ── */
       .resolve-label { font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 6px; display: block; }
       .resolve-select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; background: white; outline: none; margin-bottom: 1rem; }
       .resolve-select:focus { border-color: #3b82f6; }
@@ -109,15 +105,12 @@
 
       <div class="dashboard-content">
 
-        <!-- ── Tab Navigation ── -->
         <div class="admin-tabs">
           <button class="admin-tab active" onclick="switchTab('applications')">Applications <span class="tab-count" id="tab-count-apps">0</span></button>
           <button class="admin-tab" onclick="switchTab('disputes')">Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
         </div>
 
-        <!-- ══════════════════════════════════════════ -->
-        <!-- ── APPLICATIONS TAB (unchanged)         ── -->
-        <!-- ══════════════════════════════════════════ -->
+        <!-- ── APPLICATIONS TAB ── -->
         <div class="tab-section active" id="tab-applications">
 
           <div class="admin-header">
@@ -128,49 +121,22 @@
           </div>
 
           <div class="stats-row">
-            <div class="stat-card">
-              <p class="stat-label">Total Applications</p>
-              <p class="stat-value" id="stat-total">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">New</p>
-              <p class="stat-value" id="stat-new">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">Approved</p>
-              <p class="stat-value" id="stat-approved">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">Rejected</p>
-              <p class="stat-value" id="stat-rejected">—</p>
-            </div>
+            <div class="stat-card"><p class="stat-label">Total Applications</p><p class="stat-value" id="stat-total">—</p></div>
+            <div class="stat-card"><p class="stat-label">New</p><p class="stat-value" id="stat-new">—</p></div>
+            <div class="stat-card"><p class="stat-label">Approved</p><p class="stat-value" id="stat-approved">—</p></div>
+            <div class="stat-card"><p class="stat-label">Rejected</p><p class="stat-value" id="stat-rejected">—</p></div>
           </div>
 
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Business</th>
-                  <th>District</th>
-                  <th>Phone</th>
-                  <th>Loans</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="applications-list">
-                <tr><td colspan="8" class="empty-state">Loading...</td></tr>
-              </tbody>
+              <thead><tr><th>Name</th><th>Business</th><th>District</th><th>Phone</th><th>Loans</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody id="applications-list"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
             </table>
           </div>
 
         </div>
 
-        <!-- ══════════════════════════════════════════ -->
-        <!-- ── DISPUTES TAB                         ── -->
-        <!-- ══════════════════════════════════════════ -->
+        <!-- ── DISPUTES TAB ── -->
         <div class="tab-section" id="tab-disputes">
 
           <div class="admin-header">
@@ -181,40 +147,16 @@
           </div>
 
           <div class="stats-row">
-            <div class="stat-card">
-              <p class="stat-label">Total Disputes</p>
-              <p class="stat-value" id="stat-disputes-total">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">Pending</p>
-              <p class="stat-value" id="stat-disputes-pending" style="color:#92400e;">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">Resolved</p>
-              <p class="stat-value" id="stat-disputes-resolved" style="color:#16a34a;">—</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-label">Rejected</p>
-              <p class="stat-value" id="stat-disputes-rejected" style="color:#dc2626;">—</p>
-            </div>
+            <div class="stat-card"><p class="stat-label">Total Disputes</p><p class="stat-value" id="stat-disputes-total">—</p></div>
+            <div class="stat-card"><p class="stat-label">Pending</p><p class="stat-value" id="stat-disputes-pending" style="color:#92400e;">—</p></div>
+            <div class="stat-card"><p class="stat-label">Resolved</p><p class="stat-value" id="stat-disputes-resolved" style="color:#16a34a;">—</p></div>
+            <div class="stat-card"><p class="stat-label">Rejected</p><p class="stat-value" id="stat-disputes-rejected" style="color:#dc2626;">—</p></div>
           </div>
 
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Borrower</th>
-                  <th>NIC</th>
-                  <th>Reason</th>
-                  <th>Flagged By</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="disputes-list">
-                <tr><td colspan="7" class="empty-state">Loading...</td></tr>
-              </tbody>
+              <thead><tr><th>Borrower</th><th>NIC</th><th>Reason</th><th>Flagged By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="disputes-list"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
             </table>
           </div>
 
@@ -223,40 +165,25 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- ── VIEW DISPUTE DETAIL MODAL                ── -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- ── VIEW DISPUTE DETAIL MODAL ── -->
     <div class="modal-overlay" id="dispute-detail-modal">
       <div class="modal-box">
-        <div class="modal-header">
-          <h2>⚑ Dispute Details</h2>
-          <button class="modal-close" onclick="closeDetailModal()">✕</button>
-        </div>
+        <div class="modal-header"><h2>⚑ Dispute Details</h2><button class="modal-close" onclick="closeDetailModal()">✕</button></div>
         <div class="modal-body" id="dispute-detail-body"></div>
         <div class="modal-footer" id="dispute-detail-footer"></div>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- ── RESOLVE DISPUTE MODAL (with record edit) ── -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- ── RESOLVE DISPUTE MODAL ── -->
     <div class="modal-overlay" id="resolve-modal">
       <div class="modal-box">
-        <div class="modal-header">
-          <h2>✓ Resolve Dispute</h2>
-          <button class="modal-close" onclick="closeResolveModal()">✕</button>
-        </div>
+        <div class="modal-header"><h2>✓ Resolve Dispute</h2><button class="modal-close" onclick="closeResolveModal()">✕</button></div>
         <div class="modal-body">
-
           <div id="resolve-msg-area"></div>
-
-          <!-- Dispute summary at top -->
           <div class="modal-detail-group">
             <p class="modal-detail-label">Dispute Summary</p>
             <div class="modal-detail-value" id="resolve-dispute-summary"></div>
           </div>
-
-          <!-- Step 1: Choose resolution action -->
           <div id="resolve-form-area">
             <label class="resolve-label">What action should be taken?</label>
             <select class="resolve-select" id="resolve-action" onchange="onResolveActionChange()">
@@ -265,18 +192,12 @@
               <option value="settle">Mark the record as settled (outstanding → 0)</option>
               <option value="remove">Remove the record entirely (false submission)</option>
             </select>
-
-            <!-- Info text that changes based on selection -->
             <div id="resolve-action-info"></div>
-
-            <!-- Editable fields — shown only when "correct" is selected -->
             <div class="resolve-fields" id="resolve-correct-fields">
               <label class="resolve-label">Borrower Name</label>
               <input type="text" class="resolve-input" id="resolve-borrower-name" />
-
               <label class="resolve-label">Borrower NIC</label>
               <input type="text" class="resolve-input" id="resolve-borrower-nic" />
-
               <div class="resolve-field-row">
                 <div>
                   <label class="resolve-label">Loan Amount (LKR)</label>
@@ -287,9 +208,10 @@
                   <input type="number" class="resolve-input" id="resolve-outstanding" />
                 </div>
               </div>
+              <label class="resolve-label">Last Repayment Date</label>
+              <input type="date" class="resolve-input" id="resolve-last-repayment-date" />
             </div>
           </div>
-
         </div>
         <div class="modal-footer" id="resolve-footer">
           <button class="btn-modal-cancel" onclick="closeResolveModal()">Cancel</button>
@@ -303,17 +225,13 @@
       const ADMIN_EMAIL = '0771234567@clarix.lk'
 
       const { data: { session } } = await supabase.auth.getSession()
-
       if (!session || session.user.email !== ADMIN_EMAIL) {
         window.location.href = '../index.html'
       } else {
         document.getElementById('page-content').style.display = 'block'
       }
 
-      /* ══════════════════════════════════════════ */
-      /* ── TAB SWITCHING                        ── */
-      /* ══════════════════════════════════════════ */
-
+      /* ── TAB SWITCHING ── */
       window.switchTab = function(tab) {
         document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.remove('active'))
         event.currentTarget.classList.add('active')
@@ -322,27 +240,15 @@
       }
 
       /* ══════════════════════════════════════════ */
-      /* ── APPLICATIONS (unchanged logic)       ── */
+      /* ── APPLICATIONS                         ── */
       /* ══════════════════════════════════════════ */
 
       async function loadApplications() {
-        const { data, error } = await supabase
-          .from('applications')
-          .select('*')
-          .order('created_at', { ascending: false })
-
+        const { data, error } = await supabase.from('applications').select('*').order('created_at', { ascending: false })
         const tbody = document.getElementById('applications-list')
 
-        if (error) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error loading applications.</td></tr>'
-          return
-        }
-
-        if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No applications yet.</td></tr>'
-          document.getElementById('tab-count-apps').textContent = '0'
-          return
-        }
+        if (error) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error loading applications.</td></tr>'; return }
+        if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No applications yet.</td></tr>'; document.getElementById('tab-count-apps').textContent = '0'; return }
 
         const newCount = data.filter(a => a.status === 'new').length
         document.getElementById('stat-total').textContent = data.length
@@ -361,55 +267,26 @@
             <td>${app.loan_count}</td>
             <td><span class="badge badge-${app.status}">${app.status}</span></td>
             <td>${new Date(app.created_at).toLocaleDateString()}</td>
-            <td>
-              ${app.status === 'new' ? `
-                <button class="btn-approve" onclick="approveApplication('${app.id}', '${app.full_name}', '${app.business_name}', '${app.business_type}', '${app.district}', '${app.phone}')">Approve</button>
-                <button class="btn-reject" onclick="rejectApplication('${app.id}')">Reject</button>
-              ` : '—'}
-            </td>
+            <td>${app.status === 'new' ? `
+              <button class="btn-approve" onclick="approveApplication('${app.id}', '${app.full_name}', '${app.business_name}', '${app.business_type}', '${app.district}', '${app.phone}')">Approve</button>
+              <button class="btn-reject" onclick="rejectApplication('${app.id}')">Reject</button>
+            ` : '—'}</td>
           </tr>
         `).join('')
       }
 
       window.approveApplication = async function(id, full_name, business_name, business_type, district, phone) {
         const tempPassword = 'Clarix' + Math.floor(1000 + Math.random() * 9000)
-
-        const { error: lenderError } = await supabase
-          .from('lenders')
-          .insert([{
-            application_id: id,
-            full_name,
-            business_name,
-            business_type,
-            district,
-            phone,
-            plan: 'free',
-            status: 'active'
-          }])
-
-        if (lenderError) {
-          alert('Error creating lender record: ' + lenderError.message)
-          return
-        }
-
-        await supabase
-          .from('applications')
-          .update({ status: 'approved' })
-          .eq('id', id)
-
+        const { error: lenderError } = await supabase.from('lenders').insert([{ application_id: id, full_name, business_name, business_type, district, phone, plan: 'free', status: 'active' }])
+        if (lenderError) { alert('Error creating lender record: ' + lenderError.message); return }
+        await supabase.from('applications').update({ status: 'approved' }).eq('id', id)
         alert(`Application approved!\n\nNow go to Supabase > Authentication > Users and create:\nEmail: ${phone.replace(/\s/g,'')}@clarix.lk\nPassword: ${tempPassword}\n\nShare these login details with the lender.`)
-
         loadApplications()
       }
 
       window.rejectApplication = async function(id) {
         if (!confirm('Are you sure you want to reject this application?')) return
-
-        await supabase
-          .from('applications')
-          .update({ status: 'rejected' })
-          .eq('id', id)
-
+        await supabase.from('applications').update({ status: 'rejected' }).eq('id', id)
         loadApplications()
       }
 
@@ -421,35 +298,14 @@
       let allDisputeRecords = {}
       let allDisputeLenders = {}
 
-      const reasonLabels = {
-        'wrong_nic': 'Wrong NIC',
-        'wrong_amount': 'Wrong Amount',
-        'already_settled': 'Already Settled',
-        'false_submission': 'False Submission',
-        'identity_mismatch': 'Identity Mismatch'
-      }
-
-      const reasonLabelsFull = {
-        'wrong_nic': 'Wrong NIC — this record is linked to the wrong person',
-        'wrong_amount': 'Wrong Amount — the loan or outstanding amount is incorrect',
-        'already_settled': 'Already Settled — this loan has been fully repaid',
-        'false_submission': 'False Submission — this record is fabricated or malicious',
-        'identity_mismatch': 'Identity Mismatch — borrower name does not match NIC'
-      }
+      const reasonLabels = { 'wrong_nic': 'Wrong NIC', 'wrong_amount': 'Wrong Amount', 'already_settled': 'Already Settled', 'false_submission': 'False Submission', 'identity_mismatch': 'Identity Mismatch' }
+      const reasonLabelsFull = { 'wrong_nic': 'Wrong NIC — this record is linked to the wrong person', 'wrong_amount': 'Wrong Amount — the loan or outstanding amount is incorrect', 'already_settled': 'Already Settled — this loan has been fully repaid', 'false_submission': 'False Submission — this record is fabricated or malicious', 'identity_mismatch': 'Identity Mismatch — borrower name does not match NIC' }
 
       async function loadDisputes() {
         const tbody = document.getElementById('disputes-list')
+        const { data: disputes, error } = await supabase.from('disputes').select('*').order('created_at', { ascending: false })
 
-        const { data: disputes, error } = await supabase
-          .from('disputes')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Error loading disputes.</td></tr>'
-          return
-        }
-
+        if (error) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Error loading disputes.</td></tr>'; return }
         if (!disputes || disputes.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No disputes yet.</td></tr>'
           document.getElementById('stat-disputes-total').textContent = '0'
@@ -462,31 +318,16 @@
 
         allDisputes = disputes
 
-        // Fetch related records
         const recordIds = [...new Set(disputes.map(d => d.record_id))]
-        const { data: records } = await supabase
-          .from('records')
-          .select('id, borrower_name, borrower_nic, record_type, loan_amount, outstanding, status')
-          .in('id', recordIds)
-
+        const { data: records } = await supabase.from('records').select('id, borrower_name, borrower_nic, record_type, loan_amount, outstanding, status, last_repayment_date').in('id', recordIds)
         allDisputeRecords = {}
-        if (records) {
-          records.forEach(r => { allDisputeRecords[r.id] = r })
-        }
+        if (records) records.forEach(r => { allDisputeRecords[r.id] = r })
 
-        // Fetch lenders who raised disputes
         const lenderIds = [...new Set(disputes.map(d => d.raised_by))]
-        const { data: lenders } = await supabase
-          .from('lenders')
-          .select('id, full_name, phone')
-          .in('id', lenderIds)
-
+        const { data: lenders } = await supabase.from('lenders').select('id, full_name, phone').in('id', lenderIds)
         allDisputeLenders = {}
-        if (lenders) {
-          lenders.forEach(l => { allDisputeLenders[l.id] = l })
-        }
+        if (lenders) lenders.forEach(l => { allDisputeLenders[l.id] = l })
 
-        // Update stats
         const pendingCount = disputes.filter(d => d.status === 'pending').length
         document.getElementById('stat-disputes-total').textContent = disputes.length
         document.getElementById('stat-disputes-pending').textContent = pendingCount
@@ -495,11 +336,9 @@
         document.getElementById('tab-count-disputes').textContent = pendingCount
         if (pendingCount > 0) document.getElementById('tab-count-disputes').classList.add('alert')
 
-        // Render table
         tbody.innerHTML = disputes.map(d => {
           const record = allDisputeRecords[d.record_id] || {}
           const lender = allDisputeLenders[d.raised_by] || {}
-
           return `
             <tr>
               <td><strong>${record.borrower_name || 'Unknown'}</strong></td>
@@ -520,72 +359,42 @@
         }).join('')
       }
 
-      /* ── View Dispute Detail Modal ── */
-
+      /* ── View Dispute Detail ── */
       window.viewDispute = function(disputeId) {
         const dispute = allDisputes.find(d => d.id === disputeId)
         if (!dispute) return
-
         const record = allDisputeRecords[dispute.record_id] || {}
         const lender = allDisputeLenders[dispute.raised_by] || {}
 
         document.getElementById('dispute-detail-body').innerHTML = `
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Flagged Record</p>
-            <div class="modal-detail-value">
-              <strong>Borrower:</strong> ${record.borrower_name || 'Unknown'}<br>
-              <strong>NIC:</strong> ${record.borrower_nic || '—'}<br>
-              <strong>Type:</strong> ${record.record_type || '—'} &nbsp;|&nbsp; <strong>Loan:</strong> LKR ${record.loan_amount ? parseFloat(record.loan_amount).toLocaleString() : '—'} &nbsp;|&nbsp; <strong>Outstanding:</strong> LKR ${record.outstanding ? parseFloat(record.outstanding).toLocaleString() : '—'}<br>
-              <strong>Record Status:</strong> ${record.status || '—'}
-            </div>
-          </div>
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Reason for Dispute</p>
-            <div class="modal-detail-value">${reasonLabelsFull[dispute.reason] || dispute.reason}</div>
-          </div>
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Supporting Notes</p>
-            <div class="modal-detail-value">${dispute.notes || '<span style="color:#94a3b8;">No notes provided</span>'}</div>
-          </div>
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Raised By</p>
-            <div class="modal-detail-value">${lender.full_name || 'Unknown'} (${lender.phone || '—'})</div>
-          </div>
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Date Submitted</p>
-            <div class="modal-detail-value">${new Date(dispute.created_at).toLocaleString()}</div>
-          </div>
-          <div class="modal-detail-group">
-            <p class="modal-detail-label">Current Status</p>
-            <div class="modal-detail-value"><span class="badge badge-${dispute.status}">${dispute.status}</span></div>
-          </div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Flagged Record</p><div class="modal-detail-value">
+            <strong>Borrower:</strong> ${record.borrower_name || 'Unknown'}<br>
+            <strong>NIC:</strong> ${record.borrower_nic || '—'}<br>
+            <strong>Type:</strong> ${record.record_type || '—'} &nbsp;|&nbsp; <strong>Loan:</strong> LKR ${record.loan_amount ? parseFloat(record.loan_amount).toLocaleString() : '—'} &nbsp;|&nbsp; <strong>Outstanding:</strong> LKR ${record.outstanding ? parseFloat(record.outstanding).toLocaleString() : '—'}<br>
+            <strong>Last Repayment:</strong> ${record.last_repayment_date || 'Not recorded'}<br>
+            <strong>Record Status:</strong> ${record.status || '—'}
+          </div></div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Reason for Dispute</p><div class="modal-detail-value">${reasonLabelsFull[dispute.reason] || dispute.reason}</div></div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Supporting Notes</p><div class="modal-detail-value">${dispute.notes || '<span style="color:#94a3b8;">No notes provided</span>'}</div></div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Raised By</p><div class="modal-detail-value">${lender.full_name || 'Unknown'} (${lender.phone || '—'})</div></div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Date Submitted</p><div class="modal-detail-value">${new Date(dispute.created_at).toLocaleString()}</div></div>
+          <div class="modal-detail-group"><p class="modal-detail-label">Current Status</p><div class="modal-detail-value"><span class="badge badge-${dispute.status}">${dispute.status}</span></div></div>
         `
 
-        if (dispute.status === 'pending') {
-          document.getElementById('dispute-detail-footer').innerHTML = `
-            <button class="btn-modal-cancel" onclick="closeDetailModal()">Close</button>
-            <button class="btn-modal-reject" onclick="closeDetailModal(); rejectDispute('${dispute.id}')">Reject</button>
-            <button class="btn-modal-resolve" onclick="closeDetailModal(); openResolveModal('${dispute.id}')">Resolve</button>
-          `
-        } else {
-          document.getElementById('dispute-detail-footer').innerHTML = `
-            <button class="btn-modal-cancel" onclick="closeDetailModal()">Close</button>
-          `
-        }
+        document.getElementById('dispute-detail-footer').innerHTML = dispute.status === 'pending' ? `
+          <button class="btn-modal-cancel" onclick="closeDetailModal()">Close</button>
+          <button class="btn-modal-reject" onclick="closeDetailModal(); rejectDispute('${dispute.id}')">Reject</button>
+          <button class="btn-modal-resolve" onclick="closeDetailModal(); openResolveModal('${dispute.id}')">Resolve</button>
+        ` : `<button class="btn-modal-cancel" onclick="closeDetailModal()">Close</button>`
 
         document.getElementById('dispute-detail-modal').classList.add('active')
       }
 
-      window.closeDetailModal = function() {
-        document.getElementById('dispute-detail-modal').classList.remove('active')
-      }
-
-      document.getElementById('dispute-detail-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeDetailModal()
-      })
+      window.closeDetailModal = function() { document.getElementById('dispute-detail-modal').classList.remove('active') }
+      document.getElementById('dispute-detail-modal').addEventListener('click', function(e) { if (e.target === this) closeDetailModal() })
 
       /* ══════════════════════════════════════════ */
-      /* ── RESOLVE MODAL (with record editing)  ── */
+      /* ── RESOLVE MODAL                        ── */
       /* ══════════════════════════════════════════ */
 
       let resolveDisputeId = null
@@ -594,14 +403,12 @@
       window.openResolveModal = function(disputeId) {
         const dispute = allDisputes.find(d => d.id === disputeId)
         if (!dispute) return
-
         const record = allDisputeRecords[dispute.record_id] || {}
         const lender = allDisputeLenders[dispute.raised_by] || {}
 
         resolveDisputeId = disputeId
         resolveRecordId = dispute.record_id
 
-        // Show dispute summary
         document.getElementById('resolve-dispute-summary').innerHTML = `
           <strong>Borrower:</strong> ${record.borrower_name || 'Unknown'} &nbsp;|&nbsp; <strong>NIC:</strong> ${record.borrower_nic || '—'}<br>
           <strong>Reason:</strong> ${reasonLabelsFull[dispute.reason] || dispute.reason}<br>
@@ -609,13 +416,12 @@
           <strong>Flagged by:</strong> ${lender.full_name || 'Unknown'}
         `
 
-        // Pre-fill editable fields with current record values
         document.getElementById('resolve-borrower-name').value = record.borrower_name || ''
         document.getElementById('resolve-borrower-nic').value = record.borrower_nic || ''
         document.getElementById('resolve-loan-amount').value = record.loan_amount || ''
         document.getElementById('resolve-outstanding').value = record.outstanding || ''
+        document.getElementById('resolve-last-repayment-date').value = record.last_repayment_date || ''
 
-        // Reset form state
         document.getElementById('resolve-action').value = ''
         document.getElementById('resolve-action-info').innerHTML = ''
         document.getElementById('resolve-correct-fields').classList.remove('active')
@@ -628,22 +434,13 @@
         document.getElementById('resolve-modal').classList.add('active')
       }
 
-      window.closeResolveModal = function() {
-        document.getElementById('resolve-modal').classList.remove('active')
-        resolveDisputeId = null
-        resolveRecordId = null
-      }
+      window.closeResolveModal = function() { document.getElementById('resolve-modal').classList.remove('active'); resolveDisputeId = null; resolveRecordId = null }
+      document.getElementById('resolve-modal').addEventListener('click', function(e) { if (e.target === this) closeResolveModal() })
 
-      document.getElementById('resolve-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeResolveModal()
-      })
-
-      /* Show/hide fields based on action selection */
       window.onResolveActionChange = function() {
         const action = document.getElementById('resolve-action').value
         const infoArea = document.getElementById('resolve-action-info')
         const correctFields = document.getElementById('resolve-correct-fields')
-
         correctFields.classList.remove('active')
         infoArea.innerHTML = ''
 
@@ -657,16 +454,12 @@
         }
       }
 
-      /* Save resolution — update the record AND mark dispute as resolved */
       window.saveResolve = async function() {
         const action = document.getElementById('resolve-action').value
         const msgArea = document.getElementById('resolve-msg-area')
         const saveBtn = document.getElementById('resolve-save-btn')
 
-        if (!action) {
-          msgArea.innerHTML = '<div class="resolve-msg error">Please select a resolution action.</div>'
-          return
-        }
+        if (!action) { msgArea.innerHTML = '<div class="resolve-msg error">Please select a resolution action.</div>'; return }
 
         saveBtn.disabled = true
         saveBtn.textContent = 'Saving...'
@@ -674,150 +467,65 @@
 
         let recordActionDescription = ''
 
-        // ── Action 1: Correct record details ──
         if (action === 'correct') {
           const updatedName = document.getElementById('resolve-borrower-name').value.trim()
           const updatedNic = document.getElementById('resolve-borrower-nic').value.trim()
           const updatedLoan = document.getElementById('resolve-loan-amount').value
           const updatedOutstanding = document.getElementById('resolve-outstanding').value
+          const updatedLastRepayment = document.getElementById('resolve-last-repayment-date').value
 
-          if (!updatedName || !updatedNic) {
-            msgArea.innerHTML = '<div class="resolve-msg error">Borrower name and NIC cannot be empty.</div>'
-            saveBtn.disabled = false
-            saveBtn.textContent = 'Save & Resolve'
-            return
+          if (!updatedName || !updatedNic) { msgArea.innerHTML = '<div class="resolve-msg error">Borrower name and NIC cannot be empty.</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
+
+          const updateData = {
+            borrower_name: updatedName,
+            borrower_nic: updatedNic,
+            loan_amount: parseFloat(updatedLoan) || 0,
+            outstanding: parseFloat(updatedOutstanding) || 0,
+            last_repayment_date: updatedLastRepayment || null
           }
 
-          const { error: updateError } = await supabase
-            .from('records')
-            .update({
-              borrower_name: updatedName,
-              borrower_nic: updatedNic,
-              loan_amount: parseFloat(updatedLoan) || 0,
-              outstanding: parseFloat(updatedOutstanding) || 0
-            })
-            .eq('id', resolveRecordId)
-
-          if (updateError) {
-            msgArea.innerHTML = '<div class="resolve-msg error">Failed to update record: ' + updateError.message + '</div>'
-            saveBtn.disabled = false
-            saveBtn.textContent = 'Save & Resolve'
-            return
-          }
-
+          const { error: updateError } = await supabase.from('records').update(updateData).eq('id', resolveRecordId)
+          if (updateError) { msgArea.innerHTML = '<div class="resolve-msg error">Failed to update record: ' + updateError.message + '</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
           recordActionDescription = 'Record corrected — details updated'
         }
 
-        // ── Action 2: Mark as settled ──
         if (action === 'settle') {
-          const { error: updateError } = await supabase
-            .from('records')
-            .update({
-              status: 'settled',
-              outstanding: 0
-            })
-            .eq('id', resolveRecordId)
-
-          if (updateError) {
-            msgArea.innerHTML = '<div class="resolve-msg error">Failed to update record: ' + updateError.message + '</div>'
-            saveBtn.disabled = false
-            saveBtn.textContent = 'Save & Resolve'
-            return
-          }
-
+          const { error: updateError } = await supabase.from('records').update({ status: 'settled', outstanding: 0, last_repayment_date: new Date().toISOString().split('T')[0] }).eq('id', resolveRecordId)
+          if (updateError) { msgArea.innerHTML = '<div class="resolve-msg error">Failed to update record: ' + updateError.message + '</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
           recordActionDescription = 'Record marked as settled — outstanding set to 0'
         }
 
-        // ── Action 3: Remove record entirely ──
         if (action === 'remove') {
-          if (!confirm('Are you absolutely sure you want to permanently delete this record? This cannot be undone.')) {
-            saveBtn.disabled = false
-            saveBtn.textContent = 'Save & Resolve'
-            return
-          }
-
-          const { error: deleteError } = await supabase
-            .from('records')
-            .delete()
-            .eq('id', resolveRecordId)
-
-          if (deleteError) {
-            msgArea.innerHTML = '<div class="resolve-msg error">Failed to delete record: ' + deleteError.message + '</div>'
-            saveBtn.disabled = false
-            saveBtn.textContent = 'Save & Resolve'
-            return
-          }
-
+          if (!confirm('Are you absolutely sure you want to permanently delete this record? This cannot be undone.')) { saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
+          const { error: deleteError } = await supabase.from('records').delete().eq('id', resolveRecordId)
+          if (deleteError) { msgArea.innerHTML = '<div class="resolve-msg error">Failed to delete record: ' + deleteError.message + '</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
           recordActionDescription = 'Record permanently removed — false submission'
         }
 
-        // ── Mark dispute as resolved ──
-        const { error: disputeError } = await supabase
-          .from('disputes')
-          .update({ status: 'resolved' })
-          .eq('id', resolveDisputeId)
+        const { error: disputeError } = await supabase.from('disputes').update({ status: 'resolved' }).eq('id', resolveDisputeId)
+        if (disputeError) { msgArea.innerHTML = '<div class="resolve-msg error">Record was updated but failed to mark dispute as resolved: ' + disputeError.message + '</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
 
-        if (disputeError) {
-          msgArea.innerHTML = '<div class="resolve-msg error">Record was updated but failed to mark dispute as resolved: ' + disputeError.message + '</div>'
-          saveBtn.disabled = false
-          saveBtn.textContent = 'Save & Resolve'
-          return
-        }
+        await supabase.from('audit_log').insert([{ action: 'dispute_resolved', performed_by: 'admin', details: 'Dispute ' + resolveDisputeId + ' resolved. Action: ' + recordActionDescription }])
 
-        // ── Log to audit trail ──
-        await supabase.from('audit_log').insert([{
-          action: 'dispute_resolved',
-          performed_by: 'admin',
-          details: 'Dispute ' + resolveDisputeId + ' resolved. Action: ' + recordActionDescription
-        }])
-
-        // Show success and hide form
         msgArea.innerHTML = '<div class="resolve-msg success">✓ Dispute resolved successfully. ' + recordActionDescription + '</div>'
         document.getElementById('resolve-form-area').style.display = 'none'
         saveBtn.style.display = 'none'
-
-        // Reload disputes table in background
         loadDisputes()
       }
 
-      /* ── Reject a Dispute (no record changes) ── */
-
       window.rejectDispute = async function(disputeId) {
         if (!confirm('Reject this dispute? The flagged record will remain unchanged.')) return
-
-        const { error } = await supabase
-          .from('disputes')
-          .update({ status: 'rejected' })
-          .eq('id', disputeId)
-
-        if (error) {
-          alert('Error rejecting dispute: ' + error.message)
-          return
-        }
-
-        await supabase.from('audit_log').insert([{
-          action: 'dispute_rejected',
-          performed_by: 'admin',
-          details: 'Dispute ' + disputeId + ' rejected by admin — record unchanged'
-        }])
-
+        const { error } = await supabase.from('disputes').update({ status: 'rejected' }).eq('id', disputeId)
+        if (error) { alert('Error rejecting dispute: ' + error.message); return }
+        await supabase.from('audit_log').insert([{ action: 'dispute_rejected', performed_by: 'admin', details: 'Dispute ' + disputeId + ' rejected by admin — record unchanged' }])
         closeDetailModal()
         loadDisputes()
       }
 
-      /* ══════════════════════════════════════════ */
-      /* ── SIGN OUT                             ── */
-      /* ══════════════════════════════════════════ */
+      /* ── SIGN OUT ── */
+      window.signOut = async function() { await supabase.auth.signOut(); window.location.href = '../index.html' }
 
-      window.signOut = async function() {
-        await supabase.auth.signOut()
-        window.location.href = '../index.html'
-      }
-
-      /* ══════════════════════════════════════════ */
-      /* ── LOAD EVERYTHING ON PAGE OPEN         ── */
-      /* ══════════════════════════════════════════ */
-
+      /* ── LOAD ── */
       loadApplications()
       loadDisputes()
     </script>
