@@ -1,0 +1,222 @@
+/* ══════════════════════════════════════════ */
+/* ── Clarix Sidebar Navigation            ── */
+/* ══════════════════════════════════════════ */
+
+/* ── Sidebar Container ── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 260px;
+  height: 100vh;
+  background: #0f172a;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  transition: left 0.25s ease;
+  overflow: hidden;
+}
+
+.sidebar-open .sidebar {
+  left: 0;
+}
+
+/* ── Sidebar Header ── */
+.sidebar-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 3px;
+}
+
+.sidebar-subtitle {
+  font-size: 10px;
+  color: #475569;
+  display: block;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Navigation Links ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 0.75rem 0;
+  overflow-y: auto;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 1.5rem;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.sidebar-link:hover {
+  color: #e2e8f0;
+  background: rgba(255,255,255,0.04);
+}
+
+.sidebar-link.active {
+  color: white;
+  background: rgba(59, 130, 246, 0.12);
+  border-left-color: #3b82f6;
+}
+
+.sidebar-icon {
+  width: 20px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-icon svg {
+  display: block;
+}
+
+.sidebar-text {
+  white-space: nowrap;
+}
+
+/* ── Section Divider & Label ── */
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 0.5rem 1.5rem;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.75rem 1.5rem 0.25rem;
+}
+
+/* ── Sidebar Footer ── */
+.sidebar-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  margin-bottom: 10px;
+}
+
+.sidebar-user-phone {
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 500;
+  display: block;
+}
+
+.sidebar-user-role {
+  font-size: 10px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-top: 2px;
+}
+
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  width: 100%;
+}
+
+.sidebar-signout:hover {
+  color: #f87171;
+}
+
+.sidebar-signout svg {
+  flex-shrink: 0;
+}
+
+/* ── Hamburger Toggle Button (in topbar) ── */
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-right: 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* ── Backdrop (mobile overlay) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 899;
+}
+
+/* ── Layout Shift — Desktop ── */
+.sidebar-open .topbar {
+  margin-left: 260px;
+  transition: margin-left 0.25s ease;
+}
+
+.sidebar-open .dashboard-content {
+  margin-left: 260px;
+  transition: margin-left 0.25s ease;
+}
+
+.topbar {
+  transition: margin-left 0.25s ease;
+}
+
+.dashboard-content {
+  transition: margin-left 0.25s ease;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+
+  /* On mobile, sidebar overlays instead of pushing */
+  .sidebar-open .topbar,
+  .sidebar-open .dashboard-content {
+    margin-left: 0;
+  }
+
+  /* Show backdrop on mobile when sidebar is open */
+  .sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clarix — Admin</title>
     <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/sidebar.css" />
     <style>
       body { background-color: #f8fafc; min-height: 100vh; }
       .table-wrap { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-top: 1.5rem; }
@@ -93,7 +94,7 @@
       .resolve-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     </style>
   </head>
-  <body>
+  <body style="visibility:hidden;"></body>
 
     <div id="page-content" style="display:none;">
       <div class="topbar">
@@ -529,6 +530,6 @@
       loadApplications()
       loadDisputes()
     </script>
-
+<script type="module" src="../js/sidebar.js"></script>
   </body>
 </html>
