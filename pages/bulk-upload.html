@@ -204,8 +204,6 @@
         })
       }
 
-      setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
-setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)
 
       /* ══════════════════════════════════════════ */
       /* ── DOWNLOAD TEMPLATES                   ── */
@@ -254,7 +252,7 @@ setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePayments
         document.getElementById('records-result-area').innerHTML = ''
 
         const reader = new FileReader()
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
           const data = new Uint8Array(e.target.result)
           const workbook = XLSX.read(data, { type: 'array' })
           const sheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -270,7 +268,7 @@ setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePayments
             return
           }
 
-          validateAndPreviewRecords(rows)
+          await validateAndPreviewRecords(rows)
         }
         reader.readAsArrayBuffer(file)
       }
@@ -286,19 +284,26 @@ setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePayments
       const validRecordTypes = ['active', 'defaulter', 'partial_default', 'settled', 'restructured']
       const validCollaterals = ['none', 'gold', 'land', 'vehicle', 'other']
       const validFrequencies = ['', 'daily', 'weekly', 'biweekly', 'monthly']
-function parseExcelDate(value) {
-        if (!value) return ''
-        if (typeof value === 'number') {
-          const d = XLSX.SSF.parse_date_code(value)
-          return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
-        }
-        return String(value).trim()
-      }
-      function validateAndPreviewRecords(rows) {
+
+      async function validateAndPreviewRecords(rows) {
         validRecordsRows = []
         const results = []
 
-        rows.forEach((row, index) => {
+        // Get all existing NICs for this lender to check duplicates
+      const allNics = rows.map(r => String(r.borrower_nic || '').trim()).filter(n => n)
+      const { data: existingRecords } = await supabase
+        .from('records')
+        .select('borrower_nic')
+        .eq('lender_id', currentLenderId)
+        .in('borrower_nic', allNics)
+
+      const existingNics = new Set()
+      if (existingRecords) existingRecords.forEach(r => existingNics.add(r.borrower_nic))
+
+      // Also track duplicates within the file itself
+      const seenInFile = new Set()
+
+      rows.forEach((row, index) => {
           const errors = []
 
           const nic = String(row.borrower_nic || '').trim()
@@ -313,8 +318,8 @@ function parseExcelDate(value) {
           const installFreq = String(row.installment_frequency || '').trim().toLowerCase()
           const totalInstall = row.total_installments ? parseInt(row.total_installments) : null
           const paidInstall = row.installments_paid ? parseInt(row.installments_paid) : 0
-          const nextDue = parseExcelDate(row.next_due_date)
-          const lastRepayment = parseExcelDate(row.last_repayment_date)
+          const nextDue = String(row.next_due_date || '').trim()
+          const lastRepayment = String(row.last_repayment_date || '').trim()
           const notes = String(row.notes || '').trim()
 
           // Required field checks
@@ -329,6 +334,9 @@ function parseExcelDate(value) {
           if (collateral && !validCollaterals.includes(collateral)) errors.push('Invalid collateral — use: none, gold, land, vehicle, other')
           if (installFreq && !validFrequencies.includes(installFreq)) errors.push('Invalid frequency — use: daily, weekly, biweekly, monthly')
           if (outstanding > loanAmount) errors.push('Outstanding cannot exceed loan amount')
+          if (nic && existingNics.has(nic)) errors.push('Duplicate — record already exists for this NIC')
+          if (nic && seenInFile.has(nic)) errors.push('Duplicate — same NIC appears earlier in this file')
+          if (nic) seenInFile.add(nic)
 
           const isValid = errors.length === 0
 
@@ -439,7 +447,6 @@ function parseExcelDate(value) {
           const { error } = await supabase.from('records').insert(batch)
 
           if (error) {
-            console.log('Batch insert error:', error.message)
             failed += batch.length
           } else {
             inserted += batch.length
@@ -718,12 +725,11 @@ function parseExcelDate(value) {
         document.getElementById('payments-file-input').value = ''
         validPaymentsRows = []
       }
-setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
-      setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)
 
     </script>
 
-    <script type="module" src="../js/sidebar.js"></script>
+    <script type="module" src="../js/sidebar.js">setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
+      setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)</script>
 
   </body>
 </html>
