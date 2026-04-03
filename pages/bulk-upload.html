@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Bulk Upload</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/sidebar.css" />
+    <style>
+      body { background-color: #f8fafc; min-height: 100vh; visibility: hidden; }
+
+      .bulk-tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: #f1f5f9; padding: 4px; border-radius: 10px; width: fit-content; }
+      .bulk-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; color: #64748b; background: transparent; border: none; cursor: pointer; }
+      .bulk-tab:hover { color: #1e293b; }
+      .bulk-tab.active { background: white; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      .tab-section { display: none; }
+      .tab-section.active { display: block; }
+
+      .upload-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; }
+
+      .step-label { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+      .step-desc { font-size: 13px; color: #475569; margin-bottom: 1rem; }
+
+      .btn-download { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #1d4ed8; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
+      .btn-download:hover { background: #1e40af; }
+
+      .drop-zone { border: 2px dashed #e2e8f0; border-radius: 10px; padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.15s ease; margin-top: 1rem; }
+      .drop-zone:hover { border-color: #3b82f6; background: #f8fafc; }
+      .drop-zone.dragover { border-color: #3b82f6; background: #eff6ff; }
+      .drop-zone-icon { font-size: 32px; margin-bottom: 8px; }
+      .drop-zone-text { font-size: 13px; color: #64748b; }
+      .drop-zone-text strong { color: #3b82f6; }
+      .drop-zone input[type="file"] { display: none; }
+
+      .file-info { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-top: 1rem; font-size: 13px; color: #166534; }
+      .file-info .remove-file { background: none; border: none; color: #dc2626; cursor: pointer; margin-left: auto; font-size: 16px; }
+
+      .preview-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 1.5rem; }
+      .preview-header { padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+      .preview-title { font-size: 14px; font-weight: bold; color: #1e293b; }
+      .preview-stats { display: flex; gap: 16px; font-size: 12px; }
+      .preview-stat-valid { color: #16a34a; font-weight: bold; }
+      .preview-stat-error { color: #dc2626; font-weight: bold; }
+
+      .preview-table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+      .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 800px; }
+      .preview-table th { background: #f8fafc; padding: 8px 10px; text-align: left; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 1; }
+      .preview-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+      .preview-table tr.row-valid td { background: #f0fdf4; }
+      .preview-table tr.row-error td { background: #fef2f2; }
+      .error-msg-cell { color: #dc2626; font-size: 11px; font-weight: 500; }
+
+      .submit-bar { display: flex; align-items: center; gap: 12px; margin-top: 1rem; }
+      .btn-submit-all { padding: 11px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+      .btn-submit-all:hover { background: #15803d; }
+      .btn-submit-all:disabled { background: #94a3b8; cursor: not-allowed; }
+      .btn-clear { padding: 11px 20px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; cursor: pointer; }
+
+      .result-msg { font-size: 13px; padding: 12px 16px; border-radius: 8px; margin-top: 1rem; }
+      .result-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+      .result-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+      .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
+      .back-link:hover { color: #1d4ed8; }
+    </style>
+  </head>
+  <body>
+
+    <div id="page-content" style="display:none;">
+
+      <div class="topbar">
+        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <div class="topbar-right">
+          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
+          <button class="btn-signout" onclick="sidebarSignOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+
+        <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
+
+        <h1 class="dash-title">Bulk Upload</h1>
+        <p class="dash-subtitle">Upload multiple records or payments from an Excel file</p>
+
+        <div class="bulk-tabs">
+          <button class="bulk-tab active" onclick="switchBulkTab('records')">Bulk Records</button>
+          <button class="bulk-tab" onclick="switchBulkTab('payments')">Bulk Payments</button>
+        </div>
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- ── BULK RECORDS TAB                     ── -->
+        <!-- ══════════════════════════════════════════ -->
+        <div class="tab-section active" id="tab-records">
+
+          <div class="upload-card">
+            <p class="step-label">Step 1 — Download Template</p>
+            <p class="step-desc">Download the Excel template, fill in one borrower per row, then upload it below.</p>
+            <button class="btn-download" onclick="downloadRecordsTemplate()">⬇ Download Records Template</button>
+          </div>
+
+          <div class="upload-card">
+            <p class="step-label">Step 2 — Upload Filled File</p>
+            <p class="step-desc">Upload your completed Excel file (.xlsx or .csv). Maximum 500 records per upload.</p>
+            <div class="drop-zone" id="records-drop-zone" onclick="document.getElementById('records-file-input').click()">
+              <div class="drop-zone-icon">📄</div>
+              <p class="drop-zone-text"><strong>Click to browse</strong> or drag and drop your file here</p>
+              <input type="file" id="records-file-input" accept=".xlsx,.xls,.csv" onchange="handleRecordsFile(this)" />
+            </div>
+            <div id="records-file-info"></div>
+          </div>
+
+          <div id="records-preview-area"></div>
+          <div id="records-result-area"></div>
+
+        </div>
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- ── BULK PAYMENTS TAB                    ── -->
+        <!-- ══════════════════════════════════════════ -->
+        <div class="tab-section" id="tab-payments">
+
+          <div class="upload-card">
+            <p class="step-label">Step 1 — Download Template</p>
+            <p class="step-desc">Download the payment template, enter NIC and payment amount for each borrower who paid today.</p>
+            <button class="btn-download" onclick="downloadPaymentsTemplate()">⬇ Download Payments Template</button>
+          </div>
+
+          <div class="upload-card">
+            <p class="step-label">Step 2 — Upload Filled File</p>
+            <p class="step-desc">Upload your completed payment file (.xlsx or .csv). Maximum 500 payments per upload.</p>
+            <div class="drop-zone" id="payments-drop-zone" onclick="document.getElementById('payments-file-input').click()">
+              <div class="drop-zone-icon">📄</div>
+              <p class="drop-zone-text"><strong>Click to browse</strong> or drag and drop your file here</p>
+              <input type="file" id="payments-file-input" accept=".xlsx,.xls,.csv" onchange="handlePaymentsFile(this)" />
+            </div>
+            <div id="payments-file-info"></div>
+          </div>
+
+          <div id="payments-preview-area"></div>
+          <div id="payments-result-area"></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SheetJS library for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      let currentLenderId = null
+      let validRecordsRows = []
+      let validPaymentsRows = []
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        window.location.href = '../index.html'
+      } else {
+        document.getElementById('page-content').style.display = 'block'
+        const phone = session.user.email.replace('@clarix.lk', '')
+        document.getElementById('lender-name').textContent = phone
+
+        const { data: lenderData } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', phone)
+          .single()
+
+        if (lenderData) currentLenderId = lenderData.id
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── TAB SWITCHING                        ── */
+      /* ══════════════════════════════════════════ */
+
+      window.switchBulkTab = function(tab) {
+        document.querySelectorAll('.bulk-tab').forEach(btn => btn.classList.remove('active'))
+        event.currentTarget.classList.add('active')
+        document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
+        document.getElementById('tab-' + tab).classList.add('active')
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── DRAG AND DROP                        ── */
+      /* ══════════════════════════════════════════ */
+
+      function setupDropZone(zoneId, fileInputId, handler) {
+        const zone = document.getElementById(zoneId)
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover') })
+        zone.addEventListener('dragleave', () => { zone.classList.remove('dragover') })
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault()
+          zone.classList.remove('dragover')
+          const file = e.dataTransfer.files[0]
+          if (file) {
+            document.getElementById(fileInputId).files = e.dataTransfer.files
+            handler({ files: [file] })
+          }
+        })
+      }
+
+      setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
+setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)
+
+      /* ══════════════════════════════════════════ */
+      /* ── DOWNLOAD TEMPLATES                   ── */
+      /* ══════════════════════════════════════════ */
+
+      window.downloadRecordsTemplate = function() {
+        const headers = ['borrower_nic', 'borrower_name', 'borrower_phone', 'borrower_district', 'record_type', 'collateral', 'loan_amount', 'outstanding', 'installment_amount', 'installment_frequency', 'total_installments', 'installments_paid', 'next_due_date', 'last_repayment_date', 'notes']
+        const example = ['199012345678', 'Kamal Perera', '0771234567', 'Colombo', 'active', 'gold', '50000', '35000', '5000', 'monthly', '12', '4', '2026-05-01', '2026-03-15', 'Good borrower']
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, example])
+
+        // Set column widths
+        ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }))
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Records')
+        XLSX.writeFile(wb, 'Clarix_Bulk_Records_Template.xlsx')
+      }
+
+      window.downloadPaymentsTemplate = function() {
+        const headers = ['borrower_nic', 'payment_amount', 'payment_date', 'notes']
+        const example = ['199012345678', '5000', '2026-04-03', 'Daily payment']
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, example])
+        ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }))
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Payments')
+        XLSX.writeFile(wb, 'Clarix_Bulk_Payments_Template.xlsx')
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── BULK RECORDS — UPLOAD & VALIDATE     ── */
+      /* ══════════════════════════════════════════ */
+
+      window.handleRecordsFile = function(input) {
+        const file = input.files[0]
+        if (!file) return
+
+        document.getElementById('records-file-info').innerHTML = `
+          <div class="file-info">
+            📎 <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)
+            <button class="remove-file" onclick="clearRecordsFile()">✕</button>
+          </div>
+        `
+        document.getElementById('records-result-area').innerHTML = ''
+
+        const reader = new FileReader()
+        reader.onload = function(e) {
+          const data = new Uint8Array(e.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+
+          if (rows.length === 0) {
+            document.getElementById('records-preview-area').innerHTML = '<div class="result-msg error">File is empty or has no data rows.</div>'
+            return
+          }
+
+          if (rows.length > 500) {
+            document.getElementById('records-preview-area').innerHTML = '<div class="result-msg error">Maximum 500 records per upload. Your file has ' + rows.length + ' rows.</div>'
+            return
+          }
+
+          validateAndPreviewRecords(rows)
+        }
+        reader.readAsArrayBuffer(file)
+      }
+
+      window.clearRecordsFile = function() {
+        document.getElementById('records-file-input').value = ''
+        document.getElementById('records-file-info').innerHTML = ''
+        document.getElementById('records-preview-area').innerHTML = ''
+        document.getElementById('records-result-area').innerHTML = ''
+        validRecordsRows = []
+      }
+
+      const validRecordTypes = ['active', 'defaulter', 'partial_default', 'settled', 'restructured']
+      const validCollaterals = ['none', 'gold', 'land', 'vehicle', 'other']
+      const validFrequencies = ['', 'daily', 'weekly', 'biweekly', 'monthly']
+function parseExcelDate(value) {
+        if (!value) return ''
+        if (typeof value === 'number') {
+          const d = XLSX.SSF.parse_date_code(value)
+          return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
+        }
+        return String(value).trim()
+      }
+      function validateAndPreviewRecords(rows) {
+        validRecordsRows = []
+        const results = []
+
+        rows.forEach((row, index) => {
+          const errors = []
+
+          const nic = String(row.borrower_nic || '').trim()
+          const name = String(row.borrower_name || '').trim()
+          const phone = String(row.borrower_phone || '').trim()
+          const district = String(row.borrower_district || '').trim()
+          const recordType = String(row.record_type || '').trim().toLowerCase()
+          const collateral = String(row.collateral || 'none').trim().toLowerCase()
+          const loanAmount = parseFloat(row.loan_amount)
+          const outstanding = parseFloat(row.outstanding)
+          const installAmount = row.installment_amount ? parseFloat(row.installment_amount) : null
+          const installFreq = String(row.installment_frequency || '').trim().toLowerCase()
+          const totalInstall = row.total_installments ? parseInt(row.total_installments) : null
+          const paidInstall = row.installments_paid ? parseInt(row.installments_paid) : 0
+          const nextDue = parseExcelDate(row.next_due_date)
+          const lastRepayment = parseExcelDate(row.last_repayment_date)
+          const notes = String(row.notes || '').trim()
+
+          // Required field checks
+          if (!nic) errors.push('Missing NIC')
+          if (!name) errors.push('Missing name')
+          if (!recordType) errors.push('Missing record type')
+          if (isNaN(loanAmount) || loanAmount <= 0) errors.push('Invalid loan amount')
+          if (isNaN(outstanding) || outstanding < 0) errors.push('Invalid outstanding')
+
+          // Value checks
+          if (recordType && !validRecordTypes.includes(recordType)) errors.push('Invalid record type — use: active, defaulter, partial_default, settled, restructured')
+          if (collateral && !validCollaterals.includes(collateral)) errors.push('Invalid collateral — use: none, gold, land, vehicle, other')
+          if (installFreq && !validFrequencies.includes(installFreq)) errors.push('Invalid frequency — use: daily, weekly, biweekly, monthly')
+          if (outstanding > loanAmount) errors.push('Outstanding cannot exceed loan amount')
+
+          const isValid = errors.length === 0
+
+          const parsed = {
+            borrower_nic: nic,
+            borrower_name: name,
+            borrower_phone: phone || null,
+            borrower_district: district || null,
+            record_type: recordType,
+            collateral: collateral || 'none',
+            loan_amount: loanAmount,
+            outstanding: outstanding,
+            installment_amount: installAmount,
+            installment_frequency: installFreq || null,
+            total_installments: totalInstall,
+            installments_paid: paidInstall,
+            next_due_date: nextDue || null,
+            last_repayment_date: lastRepayment || null,
+            notes: notes || null,
+            status: recordType
+          }
+
+          if (isValid) validRecordsRows.push(parsed)
+
+          results.push({ row: index + 2, nic, name, loanAmount, outstanding, recordType, isValid, errors })
+        })
+
+        const validCount = results.filter(r => r.isValid).length
+        const errorCount = results.filter(r => !r.isValid).length
+
+        let html = `
+          <div class="preview-card">
+            <div class="preview-header">
+              <span class="preview-title">Preview — ${results.length} rows found</span>
+              <div class="preview-stats">
+                <span class="preview-stat-valid">✓ ${validCount} valid</span>
+                <span class="preview-stat-error">✕ ${errorCount} errors</span>
+              </div>
+            </div>
+            <div class="preview-table-wrap">
+              <table class="preview-table">
+                <thead>
+                  <tr>
+                    <th>Row</th>
+                    <th>NIC</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Loan</th>
+                    <th>Outstanding</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${results.map(r => `
+                    <tr class="${r.isValid ? 'row-valid' : 'row-error'}">
+                      <td>${r.row}</td>
+                      <td>${r.nic || '—'}</td>
+                      <td>${r.name || '—'}</td>
+                      <td>${r.recordType || '—'}</td>
+                      <td>${isNaN(r.loanAmount) ? '—' : 'LKR ' + r.loanAmount.toLocaleString()}</td>
+                      <td>${isNaN(r.outstanding) ? '—' : 'LKR ' + r.outstanding.toLocaleString()}</td>
+                      <td>${r.isValid ? '<span style="color:#16a34a;font-weight:bold;">✓ Valid</span>' : '<span class="error-msg-cell">✕ ' + r.errors.join(', ') + '</span>'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `
+
+        if (validCount > 0) {
+          html += `
+            <div class="submit-bar">
+              <button class="btn-submit-all" id="btn-submit-records" onclick="submitBulkRecords()">Submit ${validCount} Valid Records</button>
+              <button class="btn-clear" onclick="clearRecordsFile()">Cancel</button>
+            </div>
+          `
+        }
+
+        document.getElementById('records-preview-area').innerHTML = html
+      }
+
+      /* ── Submit Valid Records ── */
+
+      window.submitBulkRecords = async function() {
+        if (!currentLenderId) {
+          document.getElementById('records-result-area').innerHTML = '<div class="result-msg error">Lender account not found. Please sign out and sign in again.</div>'
+          return
+        }
+
+        const btn = document.getElementById('btn-submit-records')
+        btn.disabled = true
+        btn.textContent = 'Submitting...'
+
+        // Add lender_id to each row
+        const rowsToInsert = validRecordsRows.map(row => ({
+          ...row,
+          lender_id: currentLenderId
+        }))
+
+        // Insert in batches of 50 to avoid timeout
+        let inserted = 0
+        let failed = 0
+        const batchSize = 50
+
+        for (let i = 0; i < rowsToInsert.length; i += batchSize) {
+          const batch = rowsToInsert.slice(i, i + batchSize)
+          const { error } = await supabase.from('records').insert(batch)
+
+          if (error) {
+            console.log('Batch insert error:', error.message)
+            failed += batch.length
+          } else {
+            inserted += batch.length
+          }
+
+          btn.textContent = `Submitting... (${inserted + failed}/${rowsToInsert.length})`
+        }
+
+        // Log to audit trail
+        await supabase.from('audit_log').insert([{
+          action: 'bulk_records_upload',
+          lender_id: currentLenderId,
+          details: { message: `Bulk upload: ${inserted} records inserted, ${failed} failed` }
+        }])
+
+        let resultHtml = ''
+        if (failed === 0) {
+          resultHtml = `<div class="result-msg success">✓ Successfully uploaded ${inserted} records to the Clarix network.</div>`
+        } else {
+          resultHtml = `<div class="result-msg error">Uploaded ${inserted} records. ${failed} records failed to insert. Please try those again.</div>`
+        }
+
+        document.getElementById('records-result-area').innerHTML = resultHtml
+        document.getElementById('records-preview-area').innerHTML = ''
+        document.getElementById('records-file-info').innerHTML = ''
+        document.getElementById('records-file-input').value = ''
+        validRecordsRows = []
+      }
+
+      /* ══════════════════════════════════════════ */
+      /* ── BULK PAYMENTS — UPLOAD & VALIDATE    ── */
+      /* ══════════════════════════════════════════ */
+
+      window.handlePaymentsFile = function(input) {
+        const file = input.files[0]
+        if (!file) return
+
+        document.getElementById('payments-file-info').innerHTML = `
+          <div class="file-info">
+            📎 <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)
+            <button class="remove-file" onclick="clearPaymentsFile()">✕</button>
+          </div>
+        `
+        document.getElementById('payments-result-area').innerHTML = ''
+
+        const reader = new FileReader()
+        reader.onload = async function(e) {
+          const data = new Uint8Array(e.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+
+          if (rows.length === 0) {
+            document.getElementById('payments-preview-area').innerHTML = '<div class="result-msg error">File is empty or has no data rows.</div>'
+            return
+          }
+
+          if (rows.length > 500) {
+            document.getElementById('payments-preview-area').innerHTML = '<div class="result-msg error">Maximum 500 payments per upload. Your file has ' + rows.length + ' rows.</div>'
+            return
+          }
+
+          document.getElementById('payments-preview-area').innerHTML = '<p style="font-size:13px;color:#64748b;padding:1rem;">Matching borrowers to your records...</p>'
+
+          await validateAndPreviewPayments(rows)
+        }
+        reader.readAsArrayBuffer(file)
+      }
+
+      window.clearPaymentsFile = function() {
+        document.getElementById('payments-file-input').value = ''
+        document.getElementById('payments-file-info').innerHTML = ''
+        document.getElementById('payments-preview-area').innerHTML = ''
+        document.getElementById('payments-result-area').innerHTML = ''
+        validPaymentsRows = []
+      }
+
+      async function validateAndPreviewPayments(rows) {
+        validPaymentsRows = []
+
+        // Get all NIC numbers from the file
+        const nics = [...new Set(rows.map(r => String(r.borrower_nic || '').trim()).filter(n => n))]
+
+        // Fetch matching records from this lender
+        const { data: myRecords } = await supabase
+          .from('records')
+          .select('id, borrower_nic, borrower_name, outstanding, status')
+          .eq('lender_id', currentLenderId)
+          .in('borrower_nic', nics)
+
+        // Build a lookup: NIC → record (use most recent active record)
+        const recordsByNic = {}
+        if (myRecords) {
+          myRecords.forEach(r => {
+            if (!recordsByNic[r.borrower_nic] || r.status === 'active') {
+              recordsByNic[r.borrower_nic] = r
+            }
+          })
+        }
+
+        const results = []
+
+        rows.forEach((row, index) => {
+          const errors = []
+
+          const nic = String(row.borrower_nic || '').trim()
+          const amount = parseFloat(row.payment_amount)
+          const dateRaw = row.payment_date
+          const notes = String(row.notes || '').trim()
+
+          // Parse date — handle Excel date numbers
+          let paymentDate = ''
+          if (dateRaw) {
+            if (typeof dateRaw === 'number') {
+              // Excel serial date
+              const d = XLSX.SSF.parse_date_code(dateRaw)
+              paymentDate = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
+            } else {
+              paymentDate = String(dateRaw).trim()
+            }
+          }
+
+          if (!nic) errors.push('Missing NIC')
+          if (isNaN(amount) || amount <= 0) errors.push('Invalid amount')
+          if (!paymentDate) errors.push('Missing date')
+
+          const matchedRecord = recordsByNic[nic]
+          if (nic && !matchedRecord) errors.push('No matching record found')
+          if (matchedRecord && matchedRecord.status === 'settled') errors.push('Record already settled')
+          if (matchedRecord && amount > parseFloat(matchedRecord.outstanding)) errors.push('Amount exceeds outstanding (LKR ' + parseFloat(matchedRecord.outstanding).toLocaleString() + ')')
+
+          const isValid = errors.length === 0
+
+          if (isValid) {
+            validPaymentsRows.push({
+              record_id: matchedRecord.id,
+              borrower_nic: nic,
+              borrower_name: matchedRecord.borrower_name,
+              amount: amount,
+              payment_date: paymentDate,
+              notes: notes || null,
+              current_outstanding: parseFloat(matchedRecord.outstanding),
+              new_outstanding: parseFloat(matchedRecord.outstanding) - amount
+            })
+          }
+
+          results.push({
+            row: index + 2,
+            nic,
+            name: matchedRecord ? matchedRecord.borrower_name : '—',
+            amount,
+            paymentDate,
+            isValid,
+            errors
+          })
+        })
+
+        const validCount = results.filter(r => r.isValid).length
+        const errorCount = results.filter(r => !r.isValid).length
+
+        let html = `
+          <div class="preview-card">
+            <div class="preview-header">
+              <span class="preview-title">Preview — ${results.length} payments found</span>
+              <div class="preview-stats">
+                <span class="preview-stat-valid">✓ ${validCount} matched</span>
+                <span class="preview-stat-error">✕ ${errorCount} errors</span>
+              </div>
+            </div>
+            <div class="preview-table-wrap">
+              <table class="preview-table">
+                <thead>
+                  <tr>
+                    <th>Row</th>
+                    <th>NIC</th>
+                    <th>Borrower</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${results.map(r => `
+                    <tr class="${r.isValid ? 'row-valid' : 'row-error'}">
+                      <td>${r.row}</td>
+                      <td>${r.nic || '—'}</td>
+                      <td>${r.name}</td>
+                      <td>${isNaN(r.amount) ? '—' : 'LKR ' + r.amount.toLocaleString()}</td>
+                      <td>${r.paymentDate || '—'}</td>
+                      <td>${r.isValid ? '<span style="color:#16a34a;font-weight:bold;">✓ Matched</span>' : '<span class="error-msg-cell">✕ ' + r.errors.join(', ') + '</span>'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `
+
+        if (validCount > 0) {
+          html += `
+            <div class="submit-bar">
+              <button class="btn-submit-all" id="btn-submit-payments" onclick="submitBulkPayments()">Submit ${validCount} Payments</button>
+              <button class="btn-clear" onclick="clearPaymentsFile()">Cancel</button>
+            </div>
+          `
+        }
+
+        document.getElementById('payments-preview-area').innerHTML = html
+      }
+
+      /* ── Submit Valid Payments ── */
+
+      window.submitBulkPayments = async function() {
+        if (!currentLenderId) {
+          document.getElementById('payments-result-area').innerHTML = '<div class="result-msg error">Lender account not found. Please sign out and sign in again.</div>'
+          return
+        }
+
+        const btn = document.getElementById('btn-submit-payments')
+        btn.disabled = true
+        btn.textContent = 'Processing payments...'
+
+        let processed = 0
+        let failed = 0
+
+        for (const payment of validPaymentsRows) {
+          // Insert payment record
+          const { error: payErr } = await supabase
+            .from('payments')
+            .insert([{
+              record_id: payment.record_id,
+              lender_id: currentLenderId,
+              amount: payment.amount,
+              payment_date: payment.payment_date,
+              notes: payment.notes
+            }])
+
+          if (payErr) {
+            failed++
+            continue
+          }
+
+          // Update the record's outstanding and last_repayment_date
+          const newStatus = payment.new_outstanding <= 0 ? 'settled' : 'active'
+
+          await supabase
+            .from('records')
+            .update({
+              outstanding: Math.max(0, payment.new_outstanding),
+              status: newStatus,
+              last_repayment_date: payment.payment_date
+            })
+            .eq('id', payment.record_id)
+
+          processed++
+          btn.textContent = `Processing... (${processed + failed}/${validPaymentsRows.length})`
+        }
+
+        // Log to audit trail
+        await supabase.from('audit_log').insert([{
+          action: 'bulk_payments_upload',
+          lender_id: currentLenderId,
+          details: { message: `Bulk payments: ${processed} processed, ${failed} failed` }
+        }])
+
+        let resultHtml = ''
+        if (failed === 0) {
+          resultHtml = `<div class="result-msg success">✓ Successfully processed ${processed} payments. Outstanding balances and last repayment dates have been updated.</div>`
+        } else {
+          resultHtml = `<div class="result-msg error">Processed ${processed} payments. ${failed} payments failed. Please try those again.</div>`
+        }
+
+        document.getElementById('payments-result-area').innerHTML = resultHtml
+        document.getElementById('payments-preview-area').innerHTML = ''
+        document.getElementById('payments-file-info').innerHTML = ''
+        document.getElementById('payments-file-input').value = ''
+        validPaymentsRows = []
+      }
+setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
+      setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)
+
+    </script>
+
+    <script type="module" src="../js/sidebar.js"></script>
+
+  </body>
+</html>
