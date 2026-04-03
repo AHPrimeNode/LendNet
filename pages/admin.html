@@ -94,7 +94,7 @@
       .resolve-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
     </style>
   </head>
-  <body style="visibility:hidden;"></body>
+  <body style="visibility:hidden;">
 
     <div id="page-content" style="display:none;">
       <div class="topbar">
@@ -108,7 +108,8 @@
 
         <div class="admin-tabs">
           <button class="admin-tab active" onclick="switchTab('applications')">Applications <span class="tab-count" id="tab-count-apps">0</span></button>
-          <button class="admin-tab" onclick="switchTab('disputes')">Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
+        <button class="admin-tab" onclick="switchTab('disputes')">Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
+          <button class="admin-tab" onclick="switchTab('analytics')">Analytics</button>
         </div>
 
         <!-- ── APPLICATIONS TAB ── -->
@@ -160,7 +161,57 @@
               <tbody id="disputes-list"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
             </table>
           </div>
+        
+        </div>
 
+        <!-- ── ANALYTICS TAB ── -->
+        <div class="tab-section" id="tab-analytics">
+
+          <div class="admin-header">
+            <div>
+              <h1 class="dash-title">Network Analytics</h1>
+              <p class="dash-subtitle">Overview of the Clarix network — lenders, records, queries, and growth</p>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-card"><p class="stat-label">Total Lenders</p><p class="stat-value" id="analytics-lenders">—</p></div>
+            <div class="stat-card"><p class="stat-label">Total Records</p><p class="stat-value" id="analytics-records">—</p></div>
+            <div class="stat-card"><p class="stat-label">Queries This Month</p><p class="stat-value" id="analytics-queries">—</p></div>
+            <div class="stat-card"><p class="stat-label">Active Disputes</p><p class="stat-value" id="analytics-disputes">—</p></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+            <!-- Records by Status -->
+            <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:1.5rem;">
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem;">Records by Status</p>
+              <div id="analytics-status-bars"></div>
+            </div>
+
+            <!-- Top Districts -->
+            <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:1.5rem;">
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem;">Top Districts</p>
+              <div id="analytics-district-bars"></div>
+            </div>
+
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+            <!-- Queries Last 7 Days -->
+            <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:1.5rem;">
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem;">Queries — Last 7 Days</p>
+              <div id="analytics-queries-chart"></div>
+            </div>
+
+            <!-- Recent Lenders -->
+            <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:1.5rem;">
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem;">Recently Approved Lenders</p>
+              <div id="analytics-recent-lenders"></div>
+            </div>
+
+          </div>
         </div>
 
       </div>
@@ -529,6 +580,137 @@
       /* ── LOAD ── */
       loadApplications()
       loadDisputes()
+      loadAnalytics()
+// Auto-open analytics tab if coming from sidebar
+      const savedTab = localStorage.getItem('admin-tab')
+      if (savedTab === 'analytics') {
+        localStorage.removeItem('admin-tab')
+        document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.remove('active'))
+        document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
+        document.getElementById('tab-analytics').classList.add('active')
+        document.querySelectorAll('.admin-tab')[2].classList.add('active')
+      }
+      /* ══════════════════════════════════════════ */
+      /* ── ANALYTICS                            ── */
+      /* ══════════════════════════════════════════ */
+
+      async function loadAnalytics() {
+        try {
+        const { data: lenders } = await supabase.from('lenders').select('id, full_name, district, status, created_at')
+        const { data: records } = await supabase.from('records').select('id, status, borrower_district, created_at')
+        const { data: disputes } = await supabase.from('disputes').select('id, status')
+
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        monthStart.setHours(0,0,0,0)
+        const { data: queries } = await supabase.from('queries').select('id, created_at').gte('created_at', monthStart.toISOString())
+
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        const { data: recentQueries } = await supabase.from('queries').select('id, created_at').gte('created_at', sevenDaysAgo.toISOString())
+
+        document.getElementById('analytics-lenders').textContent = lenders ? lenders.filter(l => l.status === 'active').length : 0
+        document.getElementById('analytics-records').textContent = records ? records.length : 0
+        document.getElementById('analytics-queries').textContent = queries ? queries.length : 0
+        document.getElementById('analytics-disputes').textContent = disputes ? disputes.filter(d => d.status === 'pending').length : 0
+
+        if (records && records.length > 0) {
+          const statusCounts = {}
+          records.forEach(r => { statusCounts[r.status] = (statusCounts[r.status] || 0) + 1 })
+          const maxCount = Math.max(...Object.values(statusCounts))
+          const statusColors = { active: '#3b82f6', defaulter: '#dc2626', partial_default: '#f59e0b', settled: '#16a34a', restructured: '#8b5cf6' }
+
+          document.getElementById('analytics-status-bars').innerHTML = Object.entries(statusCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([status, count]) => `
+              <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                  <span style="color:#475569;text-transform:capitalize;">${status.replace('_', ' ')}</span>
+                  <span style="font-weight:bold;color:#1e293b;">${count}</span>
+                </div>
+                <div style="background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden;">
+                  <div style="background:${statusColors[status] || '#94a3b8'};height:100%;width:${(count/maxCount)*100}%;border-radius:4px;"></div>
+                </div>
+              </div>
+            `).join('')
+        } else {
+          document.getElementById('analytics-status-bars').innerHTML = '<p style="font-size:12px;color:#94a3b8;">No records yet.</p>'
+        }
+
+        if (records && records.length > 0) {
+          const districtCounts = {}
+          records.forEach(r => { if (r.borrower_district) districtCounts[r.borrower_district] = (districtCounts[r.borrower_district] || 0) + 1 })
+          const topDistricts = Object.entries(districtCounts).sort((a, b) => b[1] - a[1]).slice(0, 6)
+          const maxDistrict = topDistricts.length > 0 ? topDistricts[0][1] : 1
+
+          document.getElementById('analytics-district-bars').innerHTML = topDistricts.map(([district, count]) => `
+            <div style="margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                <span style="color:#475569;">${district}</span>
+                <span style="font-weight:bold;color:#1e293b;">${count}</span>
+              </div>
+              <div style="background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden;">
+                <div style="background:#3b82f6;height:100%;width:${(count/maxDistrict)*100}%;border-radius:4px;"></div>
+              </div>
+            </div>
+          `).join('')
+        } else {
+          document.getElementById('analytics-district-bars').innerHTML = '<p style="font-size:12px;color:#94a3b8;">No data yet.</p>'
+        }
+
+        if (recentQueries && recentQueries.length > 0) {
+          const dayCounts = {}
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date()
+            d.setDate(d.getDate() - i)
+            const key = d.toISOString().split('T')[0]
+            dayCounts[key] = 0
+          }
+          recentQueries.forEach(q => {
+            const day = q.created_at.split('T')[0]
+            if (dayCounts.hasOwnProperty(day)) dayCounts[day]++
+          })
+          const maxDay = Math.max(...Object.values(dayCounts), 1)
+          const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+          document.getElementById('analytics-queries-chart').innerHTML = `
+            <div style="display:flex;align-items:flex-end;gap:8px;height:120px;">
+              ${Object.entries(dayCounts).map(([date, count]) => {
+                const d = new Date(date)
+                const dayName = dayNames[d.getDay()]
+                const height = Math.max((count/maxDay)*100, 4)
+                return `
+                  <div style="flex:1;text-align:center;">
+                    <div style="font-size:11px;font-weight:bold;color:#1e293b;margin-bottom:4px;">${count}</div>
+                    <div style="background:#3b82f6;height:${height}px;border-radius:4px 4px 0 0;"></div>
+                    <div style="font-size:10px;color:#64748b;margin-top:4px;">${dayName}</div>
+                  </div>
+                `
+              }).join('')}
+            </div>
+          `
+        } else {
+          document.getElementById('analytics-queries-chart').innerHTML = '<p style="font-size:12px;color:#94a3b8;">No queries yet.</p>'
+        }
+
+        if (lenders && lenders.length > 0) {
+          const recentLenders = lenders.filter(l => l.status === 'active').sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
+
+          document.getElementById('analytics-recent-lenders').innerHTML = recentLenders.map(l => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+              <div>
+                <span style="color:#1e293b;font-weight:500;">${l.full_name}</span>
+                <span style="color:#94a3b8;margin-left:8px;">${l.district || ''}</span>
+              </div>
+              <span style="color:#64748b;">${new Date(l.created_at).toLocaleDateString()}</span>
+            </div>
+          `).join('')
+        } else {
+          document.getElementById('analytics-recent-lenders').innerHTML = '<p style="font-size:12px;color:#94a3b8;">No lenders yet.</p>'
+        }
+
+        } catch(err) { console.log('Analytics error:', err) }
+      }
     </script>
 <script type="module" src="../js/sidebar.js"></script>
   </body>

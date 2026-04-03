@@ -49,6 +49,10 @@ if (isAdmin) {
       <span class="sidebar-icon">${icons.admin}</span>
       <span class="sidebar-text">Admin Panel</span>
     </a>
+    <a href="admin.html" onclick="localStorage.setItem('admin-tab','analytics')" class="sidebar-link">
+      <span class="sidebar-icon">${icons.dashboard}</span>
+      <span class="sidebar-text">Analytics</span>
+    </a>
   `
 }
 
