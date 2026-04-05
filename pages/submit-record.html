@@ -6,6 +6,8 @@
     <title>Clarix — Submit Record</title>
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1d4ed8" />
     <style>
       body { background-color: #f8fafc; min-height: 100vh; }
       .form-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem; margin-top: 1.5rem; }
@@ -21,7 +23,7 @@
       .section-gap { margin-top: 1.5rem; }
     </style>
   </head>
-  <body style="visibility:hidden;"></body>
+  <body style="visibility:hidden;">
 
     <div id="page-content" style="display:none;">
 
@@ -297,7 +299,14 @@
         window.location.href = '../index.html'
       }
     </script>
-<script type="module" src="../js/sidebar.js"></script>
 
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+      }
+    </script>
+
+    <script type="module" src="../js/sidebar.js"></script>
+<script type="module" src="../js/lang.js"></script>
   </body>
 </html>

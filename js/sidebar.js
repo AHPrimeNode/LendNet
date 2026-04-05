@@ -83,6 +83,7 @@ const sidebarHTML = `
         <span>Sign Out</span>
       </button>
     </div>
+    
   </aside>
   <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="window.toggleSidebar()"></div>
 `

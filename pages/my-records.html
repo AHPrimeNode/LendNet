@@ -6,6 +6,8 @@
     <title>Clarix — My Records</title>
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1d4ed8" />
     <style>
       body { background-color: #f8fafc; min-height: 100vh; }
       .page { display: none; }
@@ -86,7 +88,7 @@
       .dispute-detail-value { font-size: 13px; color: #1e293b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.8rem; line-height: 1.6; }
     </style>
   </head>
-  <body style="visibility:hidden;"></body>
+  <body style="visibility:hidden;">
 
     <div id="page-content" style="display:none;">
 
@@ -651,6 +653,14 @@
         window.location.href = '../index.html'
       }
     </script>
-<script type="module" src="../js/sidebar.js"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+      }
+    </script>
+
+    <script type="module" src="../js/sidebar.js"></script>
+<script type="module" src="../js/lang.js"></script>
   </body>
 </html>

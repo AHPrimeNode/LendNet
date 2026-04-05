@@ -6,6 +6,8 @@
     <title>Clarix — Admin</title>
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#1d4ed8" />
     <style>
       body { background-color: #f8fafc; min-height: 100vh; }
       .table-wrap { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-top: 1.5rem; }
@@ -711,7 +713,14 @@
 
         } catch(err) { console.log('Analytics error:', err) }
       }
+      
     </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+  }
+</script>
 <script type="module" src="../js/sidebar.js"></script>
+<script type="module" src="../js/lang.js"></script>
   </body>
 </html>

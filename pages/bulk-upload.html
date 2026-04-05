@@ -6,6 +6,8 @@
     <title>Clarix — Bulk Upload</title>
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1d4ed8" />
     <style>
       body { background-color: #f8fafc; min-height: 100vh; visibility: hidden; }
 
@@ -725,11 +727,38 @@
         document.getElementById('payments-file-input').value = ''
         validPaymentsRows = []
       }
+      </script>
 
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+      }
     </script>
 
-    <script type="module" src="../js/sidebar.js">setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
-      setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)</script>
+    <script type="module" src="../js/sidebar.js"></script>
+    <script type="module" src="../js/lang.js"></script>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+
+      function setupDropZone(zoneId, fileInputId, handler) {
+        const zone = document.getElementById(zoneId)
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover') })
+        zone.addEventListener('dragleave', () => { zone.classList.remove('dragover') })
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault()
+          zone.classList.remove('dragover')
+          const file = e.dataTransfer.files[0]
+          if (file) {
+            document.getElementById(fileInputId).files = e.dataTransfer.files
+            handler({ files: [file] })
+          }
+        })
+      }
+
+      setupDropZone('records-drop-zone', 'records-file-input', window.handleRecordsFile)
+      setupDropZone('payments-drop-zone', 'payments-file-input', window.handlePaymentsFile)
+    </script>
 
   </body>
 </html>
