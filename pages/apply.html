@@ -127,11 +127,11 @@
 
       window.submitApplication = async function() {
 
-        const full_name = document.getElementById('full_name').value
-        const business_name = document.getElementById('business_name').value
+        const full_name = document.getElementById('full_name').value.trim()
+        const business_name = document.getElementById('business_name').value.trim()
         const business_type = document.getElementById('business_type').value
         const district = document.getElementById('district').value
-        const phone = document.getElementById('phone').value
+        const phone = document.getElementById('phone').value.replace(/\s/g, '')
         const loan_count = document.getElementById('loan_count').value
         const heard_from = document.getElementById('heard_from').value
 
@@ -140,9 +140,42 @@
           return
         }
 
+        if (!/^07\d{8}$/.test(phone)) {
+          alert('Please enter a valid Sri Lankan mobile number (10 digits starting with 07, e.g. 0771234567). / වලංගු දුරකථන අංකයක් ඇතුළත් කරන්න (07 කින් ඇරඹෙන අංක 10ක්).')
+          return
+        }
+
         const button = document.querySelector('.btn-primary')
         button.textContent = 'Submitting...'
         button.disabled = true
+
+        // Duplicate check — is this phone already an active lender?
+        const { data: existingLender } = await supabase
+          .from('lenders')
+          .select('id')
+          .eq('phone', phone)
+          .maybeSingle()
+
+        if (existingLender) {
+          alert('An account with this phone number already exists. Please sign in instead. / මෙම දුරකථන අංකයට ගිණුමක් දැනටමත් ඇත. ප්‍රවේශ වන්න.')
+          window.location.href = '../index.html'
+          return
+        }
+
+        // Duplicate check — is there already a pending or approved application on this phone?
+        const { data: existingApp } = await supabase
+          .from('applications')
+          .select('status')
+          .eq('phone', phone)
+          .in('status', ['new', 'approved'])
+          .maybeSingle()
+
+        if (existingApp) {
+          alert('An application with this phone number is already under review. Our team will contact you within 24 hours. / මෙම දුරකථන අංකයට අයදුම්පතක් දැනටමත් සමාලෝචනයේ ඇත.')
+          button.textContent = 'Submit Application / අයදුම්පත යොමු කරන්න'
+          button.disabled = false
+          return
+        }
 
         const { error } = await supabase
           .from('applications')

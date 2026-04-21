@@ -5,14 +5,33 @@
 // It auto-detects the current page and admin status.
 
 import { supabase } from './supabase.js'
+import { checkEnforcement } from './enforcement.js'
 
-// Only inject sidebar if user is authenticated
+// Only inject sidebar if user is authenticated — otherwise send them to login
 const { data: { session } } = await supabase.auth.getSession()
-if (!session) throw new Error('Not authenticated')
+if (!session) {
+  window.location.replace('../index.html')
+  throw new Error('Not authenticated')
+}
 
-const ADMIN_EMAIL = '0771234567@clarix.lk'
-const isAdmin = session.user.email === ADMIN_EMAIL
 const phone = session.user.email.replace('@clarix.lk', '')
+
+// Fetch lender row — source of truth for both id (enforcement) and is_admin (gating).
+// If there's no row, the account is orphaned; sign out and bounce to login.
+const { data: lenderRow } = await supabase.from('lenders').select('id, is_admin').eq('phone', phone).single()
+if (!lenderRow) {
+  await supabase.auth.signOut()
+  window.location.replace('../index.html')
+  throw new Error('No lender record for this account')
+}
+
+const isAdmin = lenderRow.is_admin === true
+const currentLenderIdForEnforcement = isAdmin ? null : lenderRow.id
+
+// Pages exempt from enforcement block (payments upload + admin)
+const currentPageName = window.location.pathname.split('/').pop()
+const exemptPages = ['bulk-upload.html', 'admin.html', 'update-required.html']
+const isExempt = isAdmin || exemptPages.includes(currentPageName)
 
 // Detect current page from URL
 const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'dashboard'
@@ -144,4 +163,26 @@ if (isMobile) {
       document.body.classList.remove('sidebar-open')
     })
   })
+}
+
+// ── Enforcement Check ──
+
+if (!isExempt && currentLenderIdForEnforcement) {
+  const enforcement = await checkEnforcement(currentLenderIdForEnforcement)
+
+  if (enforcement.blocked) {
+    window.location.href = 'update-required.html'
+  } else if (enforcement.warning) {
+    const oldest = enforcement.overdueLoans.reduce((a, b) => a.days > b.days ? a : b)
+    const daysLeft = oldest.threshold - oldest.days
+    const banner = document.createElement('div')
+    banner.id = 'enforcement-warning-banner'
+    banner.style.cssText = 'background:#fffbeb;border-bottom:2px solid #fcd34d;padding:10px 20px;font-size:13px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:12px;'
+    banner.innerHTML = `
+      <span>⚠ <strong>Payment records are due for update.</strong> ${enforcement.overdueLoans.length} loan${enforcement.overdueLoans.length > 1 ? 's' : ''} need updating — access will be restricted in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.</span>
+      <a href="bulk-upload.html" style="background:#f59e0b;color:white;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:bold;text-decoration:none;white-space:nowrap;">Update Now</a>
+    `
+    const content = document.querySelector('.dashboard-content')
+    if (content) content.insertBefore(banner, content.firstChild)
+  }
 }

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clarix — Update Required</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1d4ed8" />
+    <style>
+      body { background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+      .block-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 2.5rem; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+      .block-icon { width: 64px; height: 64px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 28px; }
+      .block-title { font-size: 20px; font-weight: bold; color: #1e293b; margin-bottom: 8px; }
+      .block-subtitle { font-size: 13px; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6; }
+      .overdue-list { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left; }
+      .overdue-list-title { font-size: 11px; font-weight: bold; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+      .overdue-item { font-size: 12px; color: #7f1d1d; padding: 4px 0; border-bottom: 1px solid #fecaca; display: flex; justify-content: space-between; }
+      .overdue-item:last-child { border-bottom: none; }
+      .btn-update { display: inline-block; background: #1d4ed8; color: white; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: bold; text-decoration: none; margin-bottom: 12px; }
+      .btn-update:hover { background: #1e40af; }
+      .btn-signout { background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; text-decoration: underline; display: block; margin: 0 auto; }
+      .btn-signout:hover { color: #64748b; }
+      .admin-note { font-size: 11px; color: #94a3b8; margin-top: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <div class="block-card">
+      <div class="block-icon">⚠</div>
+      <p class="block-title">Payment Records Need Updating</p>
+      <p class="block-subtitle">Your access has been temporarily restricted because one or more of your loans haven't had payment records updated within the required window. Please upload your payment records to restore full access.</p>
+
+      <div class="overdue-list" id="overdue-list">
+        <p class="overdue-list-title">Overdue Loans</p>
+        <p style="font-size:12px;color:#94a3b8;">Loading...</p>
+      </div>
+
+      <a href="bulk-upload.html" class="btn-update">Go to Bulk Upload → Payments</a>
+      <div id="confirm-no-payments" style="display:none;margin-top:12px;">
+        <button onclick="confirmNoPeriodPayments()" style="background:none;border:1px solid #e2e8f0;color:#64748b;padding:8px 16px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;">
+          No payments received this period — Confirm &amp; Continue
+        </button>
+      </div>
+      <button class="btn-signout" onclick="signOut()">Sign Out</button>
+      <p class="admin-note">If you believe this is an error, contact your administrator.</p>
+    </div>
+
+    <script type="module">
+      import { supabase } from '../js/supabase.js'
+      import { checkEnforcement } from '../js/enforcement.js'
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '../index.html'; }
+
+      const phone = session.user.email.replace('@clarix.lk', '')
+      const { data: lenderRow } = await supabase.from('lenders').select('id').eq('phone', phone).single()
+
+      let storedLenderId = null
+
+      if (lenderRow) {
+        storedLenderId = lenderRow.id
+        const enforcement = await checkEnforcement(lenderRow.id)
+
+        if (!enforcement.blocked) {
+          window.location.href = 'dashboard.html'
+        } else {
+          const listEl = document.getElementById('overdue-list')
+
+          if (enforcement.adminForced) {
+            listEl.innerHTML = `<p class="overdue-list-title">Admin Override Active</p><p style="font-size:12px;color:#7f1d1d;">Your account has been flagged for mandatory payment update by an administrator.</p>`
+          } else {
+            const items = enforcement.overdueLoans.slice(0, 8).map(r => `
+              <div class="overdue-item">
+                <span>${r.borrower_name} (${r.borrower_nic})</span>
+                <span>${r.days} days since update</span>
+              </div>
+            `).join('')
+            const more = enforcement.overdueLoans.length > 8 ? `<p style="font-size:11px;color:#94a3b8;margin-top:6px;">+${enforcement.overdueLoans.length - 8} more loans...</p>` : ''
+            listEl.innerHTML = `<p class="overdue-list-title">Overdue Loans (${enforcement.overdueLoans.length})</p>${items}${more}`
+
+            // Show "no payments" button only if all overdue loans are defaulters/partial_defaults
+            // (active loan lenders must go through bulk upload)
+            const allDefaulters = enforcement.overdueLoans.every(r => r.status === 'defaulter' || r.status === 'partial_default')
+            if (allDefaulters && !enforcement.adminForced) {
+              document.getElementById('confirm-no-payments').style.display = 'block'
+            }
+          }
+        }
+      }
+
+      window.confirmNoPeriodPayments = async function() {
+        if (!storedLenderId) return
+        await supabase.from('lenders').update({ last_submission_at: new Date().toISOString() }).eq('id', storedLenderId)
+        window.location.href = 'dashboard.html'
+      }
+
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+      }
+    </script>
+  </body>
+</html>

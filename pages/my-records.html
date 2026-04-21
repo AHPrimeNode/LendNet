@@ -106,8 +106,8 @@
 
         <!-- ── Tab Navigation ── -->
         <div class="records-tabs">
-          <button class="records-tab active" onclick="switchTab('records')">My Records <span class="tab-count" id="tab-count-records">0</span></button>
-          <button class="records-tab" onclick="switchTab('disputes')">My Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
+          <button class="records-tab active" onclick="switchTab('records', this)">My Records <span class="tab-count" id="tab-count-records">0</span></button>
+          <button class="records-tab" onclick="switchTab('disputes', this)">My Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
         </div>
 
         <!-- ══════════════════════════════════════════ -->
@@ -265,9 +265,9 @@
       /* ── TAB SWITCHING                        ── */
       /* ══════════════════════════════════════════ */
 
-      window.switchTab = function(tab) {
-        document.querySelectorAll('.records-tab').forEach(btn => btn.classList.remove('active'))
-        event.currentTarget.classList.add('active')
+      window.switchTab = function(tab, btn) {
+        document.querySelectorAll('.records-tab').forEach(b => b.classList.remove('active'))
+        if (btn) btn.classList.add('active')
         document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
         document.getElementById('tab-' + tab).classList.add('active')
       }
@@ -441,7 +441,14 @@
         }
 
         const newOutstanding = currentOutstanding - amount
-        const newStatus = newOutstanding <= 0 ? 'settled' : 'active'
+
+        // Preserve existing status on partial payments — only flip to 'settled' when fully paid
+        const currentRecord = allRecords.find(r => r.id === recordId)
+        const updateData = {
+          outstanding: newOutstanding,
+          last_repayment_date: date
+        }
+        if (newOutstanding <= 0) updateData.status = 'settled'
 
         const { error: paymentError } = await supabase
           .from('payments')
@@ -458,14 +465,9 @@
           return
         }
 
-        // Update outstanding, status, AND last_repayment_date automatically
         await supabase
           .from('records')
-          .update({
-            outstanding: newOutstanding,
-            status: newStatus,
-            last_repayment_date: date
-          })
+          .update(updateData)
           .eq('id', recordId)
 
         document.getElementById('modal-container').innerHTML = ''
@@ -473,14 +475,36 @@
       }
 
       window.markSettled = async function(id) {
-        if (!confirm('Mark this record as fully settled?')) return
+        const rec = allRecords.find(r => r.id === id)
+        const remaining = parseFloat(rec?.outstanding) || 0
+        const today = new Date().toISOString().split('T')[0]
+
+        const confirmMsg = remaining > 0
+          ? `Mark this record as fully settled?\n\nThis confirms you have received the outstanding LKR ${remaining.toLocaleString()} and will log it as a final payment.`
+          : 'Mark this record as fully settled?'
+        if (!confirm(confirmMsg)) return
+
+        // Log the final payment so the payments ledger stays complete
+        if (remaining > 0) {
+          const { error: paymentError } = await supabase.from('payments').insert([{
+            record_id: id,
+            lender_id: currentLenderId,
+            amount: remaining,
+            payment_date: today,
+            notes: 'Marked as settled'
+          }])
+          if (paymentError) {
+            alert('Error logging final payment: ' + paymentError.message)
+            return
+          }
+        }
 
         await supabase
           .from('records')
           .update({
             outstanding: 0,
             status: 'settled',
-            last_repayment_date: new Date().toISOString().split('T')[0]
+            last_repayment_date: today
           })
           .eq('id', id)
 

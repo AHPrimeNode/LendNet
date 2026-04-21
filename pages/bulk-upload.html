@@ -42,6 +42,7 @@
       .preview-title { font-size: 14px; font-weight: bold; color: #1e293b; }
       .preview-stats { display: flex; gap: 16px; font-size: 12px; }
       .preview-stat-valid { color: #16a34a; font-weight: bold; }
+      .preview-stat-warn { color: #92400e; font-weight: bold; }
       .preview-stat-error { color: #dc2626; font-weight: bold; }
 
       .preview-table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
@@ -49,6 +50,7 @@
       .preview-table th { background: #f8fafc; padding: 8px 10px; text-align: left; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 1; }
       .preview-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
       .preview-table tr.row-valid td { background: #f0fdf4; }
+      .preview-table tr.row-warn td { background: #fffbeb; }
       .preview-table tr.row-error td { background: #fef2f2; }
       .error-msg-cell { color: #dc2626; font-size: 11px; font-weight: 500; }
 
@@ -61,6 +63,7 @@
       .result-msg { font-size: 13px; padding: 12px 16px; border-radius: 8px; margin-top: 1rem; }
       .result-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
       .result-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+      .result-msg.warn { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 
       .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
       .back-link:hover { color: #1d4ed8; }
@@ -74,7 +77,7 @@
         <span class="logo-name" style="font-size:18px;">CLARIX</span>
         <div class="topbar-right">
           <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
-          <button class="btn-signout" onclick="sidebarSignOut()">Sign Out</button>
+          <button class="btn-signout" onclick="signOut()">Sign Out</button>
         </div>
       </div>
 
@@ -86,8 +89,8 @@
         <p class="dash-subtitle">Upload multiple records or payments from an Excel file</p>
 
         <div class="bulk-tabs">
-          <button class="bulk-tab active" onclick="switchBulkTab('records')">Bulk Records</button>
-          <button class="bulk-tab" onclick="switchBulkTab('payments')">Bulk Payments</button>
+          <button class="bulk-tab active" onclick="switchBulkTab('records', this)">Bulk Records</button>
+          <button class="bulk-tab" onclick="switchBulkTab('payments', this)">Bulk Payments</button>
         </div>
 
         <!-- ══════════════════════════════════════════ -->
@@ -123,9 +126,9 @@
         <div class="tab-section" id="tab-payments">
 
           <div class="upload-card">
-            <p class="step-label">Step 1 — Download Template</p>
-            <p class="step-desc">Download the payment template, enter NIC and payment amount for each borrower who paid today.</p>
-            <button class="btn-download" onclick="downloadPaymentsTemplate()">⬇ Download Payments Template</button>
+            <p class="step-label">Step 1 — Download Your Loans</p>
+            <p class="step-desc">Download your pre-filled loan list grouped by type. Fill in <strong>Payment Amount</strong> and <strong>Payment Date</strong> only for loans that received a payment. Leave blank rows as-is — they will be skipped.</p>
+            <button class="btn-download" onclick="downloadMyLoans()">⬇ Download My Loans (Pre-filled)</button>
           </div>
 
           <div class="upload-card">
@@ -176,65 +179,179 @@
         if (lenderData) currentLenderId = lenderData.id
       }
 
+      window.signOut = async function() {
+        await supabase.auth.signOut()
+        window.location.href = '../index.html'
+      }
+
       /* ══════════════════════════════════════════ */
       /* ── TAB SWITCHING                        ── */
       /* ══════════════════════════════════════════ */
 
-      window.switchBulkTab = function(tab) {
-        document.querySelectorAll('.bulk-tab').forEach(btn => btn.classList.remove('active'))
-        event.currentTarget.classList.add('active')
+      window.switchBulkTab = function(tab, btn) {
+        document.querySelectorAll('.bulk-tab').forEach(b => b.classList.remove('active'))
+        if (btn) btn.classList.add('active')
         document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
         document.getElementById('tab-' + tab).classList.add('active')
       }
-
-      /* ══════════════════════════════════════════ */
-      /* ── DRAG AND DROP                        ── */
-      /* ══════════════════════════════════════════ */
-
-      function setupDropZone(zoneId, fileInputId, handler) {
-        const zone = document.getElementById(zoneId)
-        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover') })
-        zone.addEventListener('dragleave', () => { zone.classList.remove('dragover') })
-        zone.addEventListener('drop', (e) => {
-          e.preventDefault()
-          zone.classList.remove('dragover')
-          const file = e.dataTransfer.files[0]
-          if (file) {
-            document.getElementById(fileInputId).files = e.dataTransfer.files
-            handler({ files: [file] })
-          }
-        })
-      }
-
 
       /* ══════════════════════════════════════════ */
       /* ── DOWNLOAD TEMPLATES                   ── */
       /* ══════════════════════════════════════════ */
 
       window.downloadRecordsTemplate = function() {
-        const headers = ['borrower_nic', 'borrower_name', 'borrower_phone', 'borrower_district', 'record_type', 'collateral', 'loan_amount', 'outstanding', 'installment_amount', 'installment_frequency', 'total_installments', 'installments_paid', 'next_due_date', 'last_repayment_date', 'notes']
-        const example = ['199012345678', 'Kamal Perera', '0771234567', 'Colombo', 'active', 'gold', '50000', '35000', '5000', 'monthly', '12', '4', '2026-05-01', '2026-03-15', 'Good borrower']
+        const headers = ['borrower_nic', 'borrower_name', 'borrower_phone', 'borrower_district', 'record_type', 'collateral', 'loan_amount', 'outstanding', 'installment_amount', 'installment_frequency', 'total_installments', 'installments_paid', 'disbursed_date', 'next_due_date', 'last_repayment_date', 'notes']
+        const example = ['199012345678', 'Kamal Perera', '0771234567', 'Colombo', 'active', 'gold', '50000', '35000', '5000', 'monthly', '12', '4', '2026-01-15', '2026-05-01', '2026-03-15', 'Good borrower']
 
-        const ws = XLSX.utils.aoa_to_sheet([headers, example])
+        // ── Records sheet (the one users fill) ──
+        const wsData = XLSX.utils.aoa_to_sheet([headers, example])
+        wsData['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }))
 
-        // Set column widths
-        ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }))
+        // ── Instructions sheet ──
+        const instructions = [
+          ['CLARIX — Bulk Records Template'],
+          ['How to fill this file'],
+          [''],
+          ['STEP 1 — Fill one borrower per row on the "Records" sheet.'],
+          ['STEP 2 — Save the file, go back to Clarix, and upload it.'],
+          [''],
+          ['REQUIRED FIELDS (cannot be blank):'],
+          ['    borrower_nic, borrower_name, record_type, loan_amount, outstanding, disbursed_date'],
+          [''],
+          ['FORMAT RULES:'],
+          ['    • Dates — use YYYY-MM-DD only.  Example: 2026-05-01'],
+          ['          Do NOT use: 25-Apr, 01/05/2026, May 1 2026'],
+          ['    • Numbers — no commas, no currency symbols.  Example: 287585'],
+          ['          Do NOT use: 287,585.00  or  LKR 287,585'],
+          ['    • Phone — 10 digits starting with 07.  Example: 0771234567'],
+          ['    • NIC — old format (9 digits + V) or new format (12 digits). No spaces.'],
+          [''],
+          ['RESTRICTED VALUES — use EXACTLY one of the options listed on the "Reference" sheet:'],
+          ['    • record_type, collateral, installment_frequency, borrower_district'],
+          [''],
+          ['OTHER RULES:'],
+          ['    • Maximum 500 records per upload.'],
+          ['    • disbursed_date cannot be in the future.'],
+          ['    • outstanding cannot exceed loan_amount.'],
+          ['    • Leave optional fields BLANK — do not type "N/A" or "-".'],
+          ['    • installments_paid must be a whole number, not a decimal.'],
+        ]
+        const wsInstructions = XLSX.utils.aoa_to_sheet(instructions)
+        wsInstructions['!cols'] = [{ wch: 90 }]
+
+        // ── Reference sheet — enumerates the allowed values ──
+        const recordTypes = ['active', 'defaulter', 'partial_default', 'settled', 'restructured']
+        const collaterals = ['none', 'gold', 'land', 'vehicle', 'other']
+        const frequencies = ['daily', 'weekly', 'monthly']
+        const districts = ['Colombo', 'Gampaha', 'Kandy', 'Galle', 'Matara', 'Kurunegala', 'Ratnapura', 'Badulla', 'Anuradhapura', 'Polonnaruwa', 'Trincomalee', 'Batticaloa', 'Jaffna', 'Matale', 'Nuwara Eliya', 'Hambantota', 'Kegalle', 'Kalutara', 'Puttalam', 'Ampara', 'Monaragala', 'Vavuniya', 'Mullaitivu', 'Kilinochchi', 'Mannar']
+        const maxLen = Math.max(recordTypes.length, collaterals.length, frequencies.length, districts.length)
+        const refRows = [['record_type', 'collateral', 'installment_frequency', 'borrower_district']]
+        for (let i = 0; i < maxLen; i++) {
+          refRows.push([
+            recordTypes[i] || '',
+            collaterals[i] || '',
+            frequencies[i] || '',
+            districts[i] || ''
+          ])
+        }
+        const wsReference = XLSX.utils.aoa_to_sheet(refRows)
+        wsReference['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 22 }, { wch: 18 }]
 
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Records')
+        XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions')
+        XLSX.utils.book_append_sheet(wb, wsData, 'Records')
+        XLSX.utils.book_append_sheet(wb, wsReference, 'Reference')
         XLSX.writeFile(wb, 'Clarix_Bulk_Records_Template.xlsx')
       }
 
-      window.downloadPaymentsTemplate = function() {
-        const headers = ['borrower_nic', 'payment_amount', 'payment_date', 'notes']
-        const example = ['199012345678', '5000', '2026-04-03', 'Daily payment']
+      window.downloadMyLoans = async function() {
+        if (!currentLenderId) {
+          alert('Lender account not found. Please sign out and sign in again.')
+          return
+        }
 
-        const ws = XLSX.utils.aoa_to_sheet([headers, example])
-        ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 2, 14) }))
+        const { data: records } = await supabase
+          .from('records')
+          .select('id, borrower_name, borrower_nic, installment_frequency, status, outstanding, next_due_date, last_repayment_date')
+          .eq('lender_id', currentLenderId)
+          .not('status', 'eq', 'settled')
+
+        if (!records || records.length === 0) {
+          alert('You have no active loans to update.')
+          return
+        }
+
+        const groups = [
+          { label: 'DAILY LOANS',         filter: r => r.installment_frequency === 'daily' && r.status === 'active' },
+          { label: 'WEEKLY LOANS',         filter: r => r.installment_frequency === 'weekly' && r.status === 'active' },
+          { label: 'MONTHLY LOANS',        filter: r => r.installment_frequency === 'monthly' && r.status === 'active' },
+          { label: 'PARTIAL DEFAULTS',     filter: r => r.status === 'partial_default' },
+          { label: 'DEFAULTERS',           filter: r => r.status === 'defaulter' },
+        ]
+
+        const headers = ['loan_id (do not edit)', 'borrower_name', 'borrower_nic', 'loan_type', 'outstanding', 'next_due_date', 'last_repayment_date', 'payment_amount', 'payment_date', 'notes']
+        const rows = [headers]
+
+        groups.forEach(group => {
+          const groupRecords = records.filter(group.filter)
+          if (groupRecords.length === 0) return
+
+          // Section header row (── in loan_id column so validator can skip it)
+          rows.push([`── ${group.label} ──`, '', '', '', '', '', '', '', '', ''])
+
+          groupRecords.forEach(r => {
+            rows.push([
+              r.id,
+              r.borrower_name,
+              r.borrower_nic,
+              r.installment_frequency || r.status,
+              r.outstanding,
+              r.next_due_date || '',
+              r.last_repayment_date || '',
+              '',
+              '',
+              ''
+            ])
+          })
+        })
+
+        const ws = XLSX.utils.aoa_to_sheet(rows)
+        ws['!cols'] = headers.map((h, i) => {
+          if (i === 0) return { wch: 38 }          // UUID width
+          if (i <= 2) return { wch: 20 }           // name / NIC
+          return { wch: Math.max(h.length + 2, 14) }
+        })
+
+        // ── Instructions sheet ──
+        const instructions = [
+          ['CLARIX — Bulk Payments Template'],
+          ['How to fill this file'],
+          [''],
+          ['STEP 1 — On the "Payments" sheet, fill in payment_amount and payment_date ONLY for loans that received a payment.'],
+          ['STEP 2 — Leave rows for loans that did NOT receive a payment completely blank (do not delete them).'],
+          ['STEP 3 — Save and upload the file back to Clarix.'],
+          [''],
+          ['FORMAT RULES:'],
+          ['    • payment_date — use YYYY-MM-DD only.  Example: 2026-04-21'],
+          ['          Do NOT use: 25-Apr, 01/05/2026, Apr 21 2026'],
+          ['    • payment_amount — whole number or decimal, no commas.  Example: 5000'],
+          ['          Do NOT use: 5,000.00  or  LKR 5,000'],
+          [''],
+          ['RULES:'],
+          ['    • Do NOT edit the loan_id column — it links the payment to the correct loan.'],
+          ['    • Do NOT edit borrower_name, borrower_nic, or outstanding — they are read-only references.'],
+          ['    • payment_amount cannot exceed the loan\'s outstanding balance.'],
+          ['    • Maximum 500 payments per upload.'],
+          ['    • Section header rows (── DAILY LOANS ── etc.) are automatically skipped — do not delete them.'],
+          ['    • A bulk payment must cover at least 70% of your active loans to reset your compliance clock.'],
+        ]
+        const wsInstructions = XLSX.utils.aoa_to_sheet(instructions)
+        wsInstructions['!cols'] = [{ wch: 95 }]
 
         const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions')
         XLSX.utils.book_append_sheet(wb, ws, 'Payments')
-        XLSX.writeFile(wb, 'Clarix_Bulk_Payments_Template.xlsx')
+        XLSX.writeFile(wb, `Clarix_MyLoans_${new Date().toISOString().split('T')[0]}.xlsx`)
       }
 
       /* ══════════════════════════════════════════ */
@@ -257,7 +374,8 @@
         reader.onload = async function(e) {
           const data = new Uint8Array(e.target.result)
           const workbook = XLSX.read(data, { type: 'array' })
-          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          // Prefer the "Records" sheet (from our template). Fall back to first sheet for older files.
+          const sheet = workbook.Sheets['Records'] || workbook.Sheets[workbook.SheetNames[0]]
           const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
           if (rows.length === 0) {
@@ -285,7 +403,24 @@
 
       const validRecordTypes = ['active', 'defaulter', 'partial_default', 'settled', 'restructured']
       const validCollaterals = ['none', 'gold', 'land', 'vehicle', 'other']
-      const validFrequencies = ['', 'daily', 'weekly', 'biweekly', 'monthly']
+      const validFrequencies = ['', 'daily', 'weekly', 'monthly']
+
+      // '' = empty cell, null = malformed, else 'YYYY-MM-DD'. Handles Excel date serials.
+      const parseDateCell = v => {
+        if (v === '' || v === null || v === undefined) return ''
+        if (typeof v === 'number') {
+          const d = XLSX.SSF.parse_date_code(v)
+          if (!d || !d.y) return null
+          return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
+        }
+        const s = String(v).trim()
+        if (!s) return ''
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
+        return s
+      }
+
+      // Strip commas/spaces so "287,585.00" parses as 287585 instead of 287
+      const parseNumCell = v => parseFloat(String(v ?? '').replace(/,/g, '').trim())
 
       async function validateAndPreviewRecords(rows) {
         validRecordsRows = []
@@ -307,6 +442,7 @@
 
       rows.forEach((row, index) => {
           const errors = []
+          const warnings = []
 
           const nic = String(row.borrower_nic || '').trim()
           const name = String(row.borrower_name || '').trim()
@@ -314,15 +450,17 @@
           const district = String(row.borrower_district || '').trim()
           const recordType = String(row.record_type || '').trim().toLowerCase()
           const collateral = String(row.collateral || 'none').trim().toLowerCase()
-          const loanAmount = parseFloat(row.loan_amount)
-          const outstanding = parseFloat(row.outstanding)
-          const installAmount = row.installment_amount ? parseFloat(row.installment_amount) : null
+          const loanAmount = parseNumCell(row.loan_amount)
+          const outstanding = parseNumCell(row.outstanding)
+          const installAmount = row.installment_amount !== '' && row.installment_amount !== null && row.installment_amount !== undefined ? parseNumCell(row.installment_amount) : null
           const installFreq = String(row.installment_frequency || '').trim().toLowerCase()
-          const totalInstall = row.total_installments ? parseInt(row.total_installments) : null
-          const paidInstall = row.installments_paid ? parseInt(row.installments_paid) : 0
-          const nextDue = String(row.next_due_date || '').trim()
-          const lastRepayment = String(row.last_repayment_date || '').trim()
+          const totalInstall = row.total_installments !== '' && row.total_installments !== null && row.total_installments !== undefined ? parseInt(String(row.total_installments).replace(/,/g, '')) : null
+          const paidInstall = row.installments_paid !== '' && row.installments_paid !== null && row.installments_paid !== undefined ? parseInt(String(row.installments_paid).replace(/,/g, '')) : 0
+          const disbursedDate = parseDateCell(row.disbursed_date)
+          const nextDue = parseDateCell(row.next_due_date)
+          const lastRepayment = parseDateCell(row.last_repayment_date)
           const notes = String(row.notes || '').trim()
+          const todayIso = new Date().toISOString().split('T')[0]
 
           // Required field checks
           if (!nic) errors.push('Missing NIC')
@@ -330,14 +468,19 @@
           if (!recordType) errors.push('Missing record type')
           if (isNaN(loanAmount) || loanAmount <= 0) errors.push('Invalid loan amount')
           if (isNaN(outstanding) || outstanding < 0) errors.push('Invalid outstanding')
+          if (!disbursedDate) errors.push('Missing disbursed_date')
+          else if (disbursedDate > todayIso) errors.push('Disbursed date cannot be in the future')
 
           // Value checks
           if (recordType && !validRecordTypes.includes(recordType)) errors.push('Invalid record type — use: active, defaulter, partial_default, settled, restructured')
           if (collateral && !validCollaterals.includes(collateral)) errors.push('Invalid collateral — use: none, gold, land, vehicle, other')
-          if (installFreq && !validFrequencies.includes(installFreq)) errors.push('Invalid frequency — use: daily, weekly, biweekly, monthly')
+          if (installFreq && !validFrequencies.includes(installFreq)) errors.push('Invalid frequency — use: daily, weekly, monthly')
           if (outstanding > loanAmount) errors.push('Outstanding cannot exceed loan amount')
-          if (nic && existingNics.has(nic)) errors.push('Duplicate — record already exists for this NIC')
-          if (nic && seenInFile.has(nic)) errors.push('Duplicate — same NIC appears earlier in this file')
+          if (nextDue === null) errors.push('Invalid next_due_date — use YYYY-MM-DD')
+          if (lastRepayment === null) errors.push('Invalid last_repayment_date — use YYYY-MM-DD')
+          if (disbursedDate === null) errors.push('Invalid disbursed_date — use YYYY-MM-DD')
+          if (nic && existingNics.has(nic)) warnings.push('Existing loan found for this NIC — adding another')
+          if (nic && seenInFile.has(nic)) warnings.push('Same NIC appears multiple times in this file')
           if (nic) seenInFile.add(nic)
 
           const isValid = errors.length === 0
@@ -351,10 +494,11 @@
             collateral: collateral || 'none',
             loan_amount: loanAmount,
             outstanding: outstanding,
-            installment_amount: installAmount,
+            installment_amount: isNaN(installAmount) ? null : installAmount,
             installment_frequency: installFreq || null,
-            total_installments: totalInstall,
-            installments_paid: paidInstall,
+            total_installments: isNaN(totalInstall) ? null : totalInstall,
+            installments_paid: isNaN(paidInstall) ? 0 : paidInstall,
+            disbursed_date: disbursedDate,
             next_due_date: nextDue || null,
             last_repayment_date: lastRepayment || null,
             notes: notes || null,
@@ -363,11 +507,12 @@
 
           if (isValid) validRecordsRows.push(parsed)
 
-          results.push({ row: index + 2, nic, name, loanAmount, outstanding, recordType, isValid, errors })
+          results.push({ row: index + 2, nic, name, loanAmount, outstanding, recordType, isValid, errors, warnings })
         })
 
         const validCount = results.filter(r => r.isValid).length
         const errorCount = results.filter(r => !r.isValid).length
+        const warnCount = results.filter(r => r.isValid && r.warnings.length > 0).length
 
         let html = `
           <div class="preview-card">
@@ -375,9 +520,11 @@
               <span class="preview-title">Preview — ${results.length} rows found</span>
               <div class="preview-stats">
                 <span class="preview-stat-valid">✓ ${validCount} valid</span>
+                ${warnCount > 0 ? `<span class="preview-stat-warn">⚠ ${warnCount} warnings</span>` : ''}
                 <span class="preview-stat-error">✕ ${errorCount} errors</span>
               </div>
             </div>
+            ${warnCount > 0 ? `<div style="padding:10px 16px;background:#fffbeb;border-bottom:1px solid #fcd34d;font-size:12px;color:#92400e;">⚠ Warning rows will still be submitted — they represent additional loans for existing borrowers.</div>` : ''}
             <div class="preview-table-wrap">
               <table class="preview-table">
                 <thead>
@@ -393,14 +540,14 @@
                 </thead>
                 <tbody>
                   ${results.map(r => `
-                    <tr class="${r.isValid ? 'row-valid' : 'row-error'}">
+                    <tr class="${!r.isValid ? 'row-error' : r.warnings.length > 0 ? 'row-warn' : 'row-valid'}">
                       <td>${r.row}</td>
                       <td>${r.nic || '—'}</td>
                       <td>${r.name || '—'}</td>
                       <td>${r.recordType || '—'}</td>
                       <td>${isNaN(r.loanAmount) ? '—' : 'LKR ' + r.loanAmount.toLocaleString()}</td>
                       <td>${isNaN(r.outstanding) ? '—' : 'LKR ' + r.outstanding.toLocaleString()}</td>
-                      <td>${r.isValid ? '<span style="color:#16a34a;font-weight:bold;">✓ Valid</span>' : '<span class="error-msg-cell">✕ ' + r.errors.join(', ') + '</span>'}</td>
+                      <td>${!r.isValid ? '<span class="error-msg-cell">✕ ' + r.errors.join(', ') + '</span>' : r.warnings.length > 0 ? '<span style="color:#92400e;font-weight:bold;">⚠ ' + r.warnings.join(', ') + '</span>' : '<span style="color:#16a34a;font-weight:bold;">✓ Valid</span>'}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -412,7 +559,7 @@
         if (validCount > 0) {
           html += `
             <div class="submit-bar">
-              <button class="btn-submit-all" id="btn-submit-records" onclick="submitBulkRecords()">Submit ${validCount} Valid Records</button>
+              <button class="btn-submit-all" id="btn-submit-records" onclick="submitBulkRecords()">Submit ${validCount} Record${validCount > 1 ? 's' : ''}${warnCount > 0 ? ` (incl. ${warnCount} multi-loan)` : ''}</button>
               <button class="btn-clear" onclick="clearRecordsFile()">Cancel</button>
             </div>
           `
@@ -465,17 +612,30 @@
         }])
 
         let resultHtml = ''
+        const totalToInsert = rowsToInsert.length
+
         if (failed === 0) {
+          // Full success — clear everything
           resultHtml = `<div class="result-msg success">✓ Successfully uploaded ${inserted} records to the Clarix network.</div>`
+          document.getElementById('records-preview-area').innerHTML = ''
+          document.getElementById('records-file-info').innerHTML = ''
+          document.getElementById('records-file-input').value = ''
+          validRecordsRows = []
+        } else if (inserted === 0) {
+          // Nothing made it to the DB — safe to retry the same preview
+          resultHtml = `<div class="result-msg error">Upload failed. None of the ${failed} records were inserted. You can click Submit again to retry.</div>`
+          btn.disabled = false
+          btn.textContent = `Submit ${totalToInsert} Record${totalToInsert > 1 ? 's' : ''}`
         } else {
-          resultHtml = `<div class="result-msg error">Uploaded ${inserted} records. ${failed} records failed to insert. Please try those again.</div>`
+          // Partial failure — clear state to prevent accidental duplicate re-submission
+          resultHtml = `<div class="result-msg error">Uploaded ${inserted} of ${totalToInsert} records. ${failed} records failed. To retry without creating duplicates, re-upload a file containing only the failed rows.</div>`
+          document.getElementById('records-preview-area').innerHTML = ''
+          document.getElementById('records-file-info').innerHTML = ''
+          document.getElementById('records-file-input').value = ''
+          validRecordsRows = []
         }
 
         document.getElementById('records-result-area').innerHTML = resultHtml
-        document.getElementById('records-preview-area').innerHTML = ''
-        document.getElementById('records-file-info').innerHTML = ''
-        document.getElementById('records-file-input').value = ''
-        validRecordsRows = []
       }
 
       /* ══════════════════════════════════════════ */
@@ -498,7 +658,8 @@
         reader.onload = async function(e) {
           const data = new Uint8Array(e.target.result)
           const workbook = XLSX.read(data, { type: 'array' })
-          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          // Prefer the "Payments" sheet (from our template). Fall back to first sheet for older files.
+          const sheet = workbook.Sheets['Payments'] || workbook.Sheets[workbook.SheetNames[0]]
           const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
           if (rows.length === 0) {
@@ -529,31 +690,58 @@
       async function validateAndPreviewPayments(rows) {
         validPaymentsRows = []
 
-        // Get all NIC numbers from the file
-        const nics = [...new Set(rows.map(r => String(r.borrower_nic || '').trim()).filter(n => n))]
+        // Helper: read the loan_id column whether users renamed the header or not
+        const getLoanId = r => {
+          for (const k of Object.keys(r)) {
+            if (k.toLowerCase().startsWith('loan_id')) return String(r[k] || '').trim()
+          }
+          return ''
+        }
 
-        // Fetch matching records from this lender
+        // Skip section header rows (loan_id column starts with "──")
+        rows = rows.filter(r => {
+          const lid = getLoanId(r)
+          const nic = String(r.borrower_nic || '').trim()
+          if (lid.startsWith('──') || lid.startsWith('==')) return false
+          if (nic.startsWith('──') || nic.startsWith('==')) return false
+          return lid || nic
+        })
+
+        // Skip rows where payment_amount is blank (lender left them empty intentionally)
+        rows = rows.filter(r => r.payment_amount !== '' && r.payment_amount !== null && r.payment_amount !== undefined)
+
+        if (rows.length === 0) {
+          document.getElementById('payments-preview-area').innerHTML = '<div class="result-msg error">No payment rows found. Fill in Payment Amount and Payment Date for loans that were paid.</div>'
+          return
+        }
+
+        // Fetch ALL non-settled records for this lender (needed for NIC-ambiguity checks)
         const { data: myRecords } = await supabase
           .from('records')
           .select('id, borrower_nic, borrower_name, outstanding, status')
           .eq('lender_id', currentLenderId)
-          .in('borrower_nic', nics)
+          .not('status', 'eq', 'settled')
 
-        // Build a lookup: NIC → record (use most recent active record)
-        const recordsByNic = {}
+        // Lookups: by id (authoritative) and by NIC (fallback, with count for ambiguity detection)
+        const recordsById = {}
+        const nicRecordCount = {}
+        const recordByNic = {}
         if (myRecords) {
           myRecords.forEach(r => {
-            if (!recordsByNic[r.borrower_nic] || r.status === 'active') {
-              recordsByNic[r.borrower_nic] = r
-            }
+            recordsById[r.id] = r
+            nicRecordCount[r.borrower_nic] = (nicRecordCount[r.borrower_nic] || 0) + 1
+            recordByNic[r.borrower_nic] = r
           })
         }
 
+        // Track which records already got a payment in THIS file — prevent double-pay
+        const usedRecordIds = new Set()
         const results = []
 
         rows.forEach((row, index) => {
           const errors = []
 
+          const loanId = getLoanId(row)
           const nic = String(row.borrower_nic || '').trim()
           const amount = parseFloat(row.payment_amount)
           const dateRaw = row.payment_date
@@ -563,7 +751,6 @@
           let paymentDate = ''
           if (dateRaw) {
             if (typeof dateRaw === 'number') {
-              // Excel serial date
               const d = XLSX.SSF.parse_date_code(dateRaw)
               paymentDate = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`
             } else {
@@ -571,22 +758,39 @@
             }
           }
 
-          if (!nic) errors.push('Missing NIC')
           if (isNaN(amount) || amount <= 0) errors.push('Invalid amount')
           if (!paymentDate) errors.push('Missing date')
 
-          const matchedRecord = recordsByNic[nic]
-          if (nic && !matchedRecord) errors.push('No matching record found')
-          if (matchedRecord && matchedRecord.status === 'settled') errors.push('Record already settled')
-          if (matchedRecord && amount > parseFloat(matchedRecord.outstanding)) errors.push('Amount exceeds outstanding (LKR ' + parseFloat(matchedRecord.outstanding).toLocaleString() + ')')
+          // Resolve which record this row targets
+          let matchedRecord = null
+          if (loanId && recordsById[loanId]) {
+            matchedRecord = recordsById[loanId]
+          } else if (loanId) {
+            errors.push('Unknown loan_id (not on your account or already settled)')
+          } else if (!nic) {
+            errors.push('Missing loan_id and NIC')
+          } else if (nicRecordCount[nic] > 1) {
+            errors.push(`This borrower has ${nicRecordCount[nic]} active loans — use the downloaded template so each loan has its loan_id`)
+          } else if (nicRecordCount[nic] === 1) {
+            matchedRecord = recordByNic[nic]
+          } else {
+            errors.push('No matching record found')
+          }
+
+          if (matchedRecord) {
+            if (usedRecordIds.has(matchedRecord.id)) errors.push('This loan already has a payment earlier in the file')
+            if (amount > parseFloat(matchedRecord.outstanding)) errors.push('Amount exceeds outstanding (LKR ' + parseFloat(matchedRecord.outstanding).toLocaleString() + ')')
+          }
 
           const isValid = errors.length === 0
 
           if (isValid) {
+            usedRecordIds.add(matchedRecord.id)
             validPaymentsRows.push({
               record_id: matchedRecord.id,
-              borrower_nic: nic,
+              borrower_nic: matchedRecord.borrower_nic,
               borrower_name: matchedRecord.borrower_name,
+              current_status: matchedRecord.status,
               amount: amount,
               payment_date: paymentDate,
               notes: notes || null,
@@ -597,7 +801,7 @@
 
           results.push({
             row: index + 2,
-            nic,
+            nic: matchedRecord ? matchedRecord.borrower_nic : (nic || '—'),
             name: matchedRecord ? matchedRecord.borrower_name : '—',
             amount,
             paymentDate,
@@ -667,12 +871,18 @@
           return
         }
 
+        // Coverage threshold — bulk upload only resets the compliance clock when it
+        // touches at least this fraction of the lender's active records. Applies to
+        // every lender, not just admin-blocked ones.
+        const COMPLIANCE_THRESHOLD = 0.70
+
         const btn = document.getElementById('btn-submit-payments')
         btn.disabled = true
         btn.textContent = 'Processing payments...'
 
         let processed = 0
         let failed = 0
+        const touchedRecordIds = new Set()
 
         for (const payment of validPaymentsRows) {
           // Insert payment record
@@ -691,34 +901,69 @@
             continue
           }
 
-          // Update the record's outstanding and last_repayment_date
-          const newStatus = payment.new_outstanding <= 0 ? 'settled' : 'active'
+          // Preserve existing status on partial payments — only flip to 'settled' when fully paid
+          const updateData = {
+            outstanding: Math.max(0, payment.new_outstanding),
+            last_repayment_date: payment.payment_date
+          }
+          if (payment.new_outstanding <= 0) updateData.status = 'settled'
 
           await supabase
             .from('records')
-            .update({
-              outstanding: Math.max(0, payment.new_outstanding),
-              status: newStatus,
-              last_repayment_date: payment.payment_date
-            })
+            .update(updateData)
             .eq('id', payment.record_id)
 
           processed++
+          touchedRecordIds.add(payment.record_id)
           btn.textContent = `Processing... (${processed + failed}/${validPaymentsRows.length})`
+        }
+
+        // Compliance check — count this lender's records that still need ongoing updates
+        const { count: activeCount } = await supabase
+          .from('records')
+          .select('id', { count: 'exact', head: true })
+          .eq('lender_id', currentLenderId)
+          .in('status', ['active', 'defaulter', 'partial_default'])
+
+        const activeTotal = activeCount ?? 0
+        const coverage = activeTotal > 0 ? touchedRecordIds.size / activeTotal : 1
+        const coveragePct = Math.round(coverage * 100)
+        const compliant = coverage >= COMPLIANCE_THRESHOLD
+
+        // Only reset the compliance clock (and clear any admin Force Update flag)
+        // when coverage meets the threshold
+        if (compliant) {
+          await supabase.from('lenders').update({
+            last_submission_at: new Date().toISOString(),
+            update_required: false
+          }).eq('id', currentLenderId)
         }
 
         // Log to audit trail
         await supabase.from('audit_log').insert([{
           action: 'bulk_payments_upload',
           lender_id: currentLenderId,
-          details: { message: `Bulk payments: ${processed} processed, ${failed} failed` }
+          details: {
+            message: `Bulk payments: ${processed} processed, ${failed} failed`,
+            touched_records: touchedRecordIds.size,
+            active_records: activeTotal,
+            coverage_pct: coveragePct,
+            compliance_met: compliant
+          }
         }])
 
+        const thresholdPct = Math.round(COMPLIANCE_THRESHOLD * 100)
         let resultHtml = ''
-        if (failed === 0) {
-          resultHtml = `<div class="result-msg success">✓ Successfully processed ${processed} payments. Outstanding balances and last repayment dates have been updated.</div>`
+
+        if (processed === 0 && failed > 0) {
+          resultHtml = `<div class="result-msg error">Processed 0 payments. ${failed} failed. Please review the file and try again.</div>`
+        } else if (compliant) {
+          const coverageLine = activeTotal > 0
+            ? ` This upload covered ${touchedRecordIds.size} of ${activeTotal} active loans (${coveragePct}%). Compliance maintained.`
+            : ''
+          resultHtml = `<div class="result-msg success">✓ Successfully processed ${processed} payments.${coverageLine}</div>`
         } else {
-          resultHtml = `<div class="result-msg error">Processed ${processed} payments. ${failed} payments failed. Please try those again.</div>`
+          resultHtml = `<div class="result-msg warn">Processed ${processed} payments, but this upload only covered ${touchedRecordIds.size} of ${activeTotal} active loans (${coveragePct}%). At least ${thresholdPct}% coverage is required for this submission to count toward your compliance clock. Upload more updates to avoid restrictions.</div>`
         }
 
         document.getElementById('payments-result-area').innerHTML = resultHtml

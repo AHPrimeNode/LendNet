@@ -109,9 +109,9 @@
       <div class="dashboard-content">
 
         <div class="admin-tabs">
-          <button class="admin-tab active" onclick="switchTab('applications')">Applications <span class="tab-count" id="tab-count-apps">0</span></button>
-        <button class="admin-tab" onclick="switchTab('disputes')">Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
-          <button class="admin-tab" onclick="switchTab('analytics')">Analytics</button>
+          <button class="admin-tab active" onclick="switchTab('applications', this)">Applications <span class="tab-count" id="tab-count-apps">0</span></button>
+        <button class="admin-tab" onclick="switchTab('disputes', this)">Disputes <span class="tab-count" id="tab-count-disputes">0</span></button>
+          <button class="admin-tab" onclick="switchTab('analytics', this)">Analytics</button>
         </div>
 
         <!-- ── APPLICATIONS TAB ── -->
@@ -214,6 +214,18 @@
             </div>
 
           </div>
+
+          <!-- Lender Management -->
+          <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:1.5rem;margin-top:1.5rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+              <p style="font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Lender Management — Update Enforcement</p>
+              <button onclick="forceUpdateAll()" style="padding:5px 14px;background:#dc2626;color:white;border:none;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;">Force All to Update</button>
+            </div>
+            <p style="font-size:11px;color:#94a3b8;margin-bottom:1rem;">Toggle "Force Update" to restrict a lender's access until they submit payment records. This overrides the automatic threshold.</p>
+            <div id="lender-management-list"><p style="font-size:12px;color:#94a3b8;">Loading...</p></div>
+          </div>
+
+        </div>
         </div>
 
       </div>
@@ -276,19 +288,35 @@
 
     <script type="module">
       import { supabase } from '../js/supabase.js'
-      const ADMIN_EMAIL = '0771234567@clarix.lk'
 
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session || session.user.email !== ADMIN_EMAIL) {
+      if (!session) {
         window.location.href = '../index.html'
-      } else {
-        document.getElementById('page-content').style.display = 'block'
+        throw new Error('Not authenticated')
       }
 
+      // Gate on the is_admin flag from the lenders row, not a hardcoded email.
+      const adminPhone = session.user.email.replace('@clarix.lk', '')
+      const { data: adminLenderRow } = await supabase.from('lenders').select('id, is_admin').eq('phone', adminPhone).single()
+
+      if (!adminLenderRow || !adminLenderRow.is_admin) {
+        window.location.href = '../index.html'
+        throw new Error('Not authorized')
+      }
+
+      document.getElementById('page-content').style.display = 'block'
+      const adminLenderId = adminLenderRow.id
+
+      function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))
+      }
+
+      let allApplications = []
+
       /* ── TAB SWITCHING ── */
-      window.switchTab = function(tab) {
-        document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.remove('active'))
-        event.currentTarget.classList.add('active')
+      window.switchTab = function(tab, btn) {
+        document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'))
+        if (btn) btn.classList.add('active')
         document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'))
         document.getElementById('tab-' + tab).classList.add('active')
       }
@@ -312,24 +340,36 @@
         document.getElementById('tab-count-apps').textContent = newCount
         if (newCount > 0) document.getElementById('tab-count-apps').classList.add('alert')
 
+        allApplications = data
+
         tbody.innerHTML = data.map(app => `
           <tr>
-            <td><strong>${app.full_name}</strong></td>
-            <td>${app.business_name}</td>
-            <td>${app.district}</td>
-            <td>${app.phone}</td>
-            <td>${app.loan_count}</td>
-            <td><span class="badge badge-${app.status}">${app.status}</span></td>
+            <td><strong>${esc(app.full_name)}</strong></td>
+            <td>${esc(app.business_name)}</td>
+            <td>${esc(app.district)}</td>
+            <td>${esc(app.phone)}</td>
+            <td>${esc(app.loan_count)}</td>
+            <td><span class="badge badge-${esc(app.status)}">${esc(app.status)}</span></td>
             <td>${new Date(app.created_at).toLocaleDateString()}</td>
             <td>${app.status === 'new' ? `
-              <button class="btn-approve" onclick="approveApplication('${app.id}', '${app.full_name}', '${app.business_name}', '${app.business_type}', '${app.district}', '${app.phone}')">Approve</button>
-              <button class="btn-reject" onclick="rejectApplication('${app.id}')">Reject</button>
+              <button class="btn-approve" data-app-id="${esc(app.id)}">Approve</button>
+              <button class="btn-reject" data-app-id="${esc(app.id)}">Reject</button>
             ` : '—'}</td>
           </tr>
         `).join('')
       }
 
-      window.approveApplication = async function(id, full_name, business_name, business_type, district, phone) {
+      document.getElementById('applications-list').addEventListener('click', e => {
+        const approveBtn = e.target.closest('.btn-approve')
+        if (approveBtn && approveBtn.dataset.appId) { window.approveApplication(approveBtn.dataset.appId); return }
+        const rejectBtn = e.target.closest('.btn-reject')
+        if (rejectBtn && rejectBtn.dataset.appId) { window.rejectApplication(rejectBtn.dataset.appId); return }
+      })
+
+      window.approveApplication = async function(id) {
+        const app = allApplications.find(a => a.id === id)
+        if (!app) { alert('Application not found.'); return }
+        const { full_name, business_name, business_type, district, phone } = app
         const tempPassword = 'Clarix' + Math.floor(1000 + Math.random() * 9000)
         const { error: lenderError } = await supabase.from('lenders').insert([{ application_id: id, full_name, business_name, business_type, district, phone, plan: 'free', status: 'active' }])
         if (lenderError) { alert('Error creating lender record: ' + lenderError.message); return }
@@ -559,7 +599,7 @@
         const { error: disputeError } = await supabase.from('disputes').update({ status: 'resolved' }).eq('id', resolveDisputeId)
         if (disputeError) { msgArea.innerHTML = '<div class="resolve-msg error">Record was updated but failed to mark dispute as resolved: ' + disputeError.message + '</div>'; saveBtn.disabled = false; saveBtn.textContent = 'Save & Resolve'; return }
 
-        await supabase.from('audit_log').insert([{ action: 'dispute_resolved', performed_by: 'admin', details: 'Dispute ' + resolveDisputeId + ' resolved. Action: ' + recordActionDescription }])
+        await supabase.from('audit_log').insert([{ action: 'dispute_resolved', lender_id: adminLenderId, details: { message: 'Dispute ' + resolveDisputeId + ' resolved. Action: ' + recordActionDescription } }])
 
         msgArea.innerHTML = '<div class="resolve-msg success">✓ Dispute resolved successfully. ' + recordActionDescription + '</div>'
         document.getElementById('resolve-form-area').style.display = 'none'
@@ -571,9 +611,87 @@
         if (!confirm('Reject this dispute? The flagged record will remain unchanged.')) return
         const { error } = await supabase.from('disputes').update({ status: 'rejected' }).eq('id', disputeId)
         if (error) { alert('Error rejecting dispute: ' + error.message); return }
-        await supabase.from('audit_log').insert([{ action: 'dispute_rejected', performed_by: 'admin', details: 'Dispute ' + disputeId + ' rejected by admin — record unchanged' }])
+        await supabase.from('audit_log').insert([{ action: 'dispute_rejected', lender_id: adminLenderId, details: { message: 'Dispute ' + disputeId + ' rejected by admin — record unchanged' } }])
         closeDetailModal()
         loadDisputes()
+      }
+
+      /* ── LENDER MANAGEMENT ── */
+
+      async function loadLenderManagement() {
+        const { data: lenders } = await supabase
+          .from('lenders')
+          .select('id, full_name, phone, district, update_required, status')
+          .eq('status', 'active')
+          .order('full_name')
+
+        const el = document.getElementById('lender-management-list')
+        if (!lenders || lenders.length === 0) {
+          el.innerHTML = '<p style="font-size:12px;color:#94a3b8;">No active lenders.</p>'
+          return
+        }
+
+        el.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr>
+                <th style="text-align:left;font-size:11px;color:#64748b;padding:8px 0;border-bottom:1px solid #e2e8f0;">Name</th>
+                <th style="text-align:left;font-size:11px;color:#64748b;padding:8px 0;border-bottom:1px solid #e2e8f0;">Phone</th>
+                <th style="text-align:left;font-size:11px;color:#64748b;padding:8px 0;border-bottom:1px solid #e2e8f0;">District</th>
+                <th style="text-align:center;font-size:11px;color:#64748b;padding:8px 0;border-bottom:1px solid #e2e8f0;">Force Update</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lenders.map(l => `
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#1e293b;font-weight:500;">${l.full_name}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#64748b;">${l.phone}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#64748b;">${l.district || '—'}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;text-align:center;">
+                    <button onclick="toggleForceUpdate('${l.id}', ${l.update_required})"
+                      style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;border:none;
+                        ${l.update_required ? 'background:#fee2e2;color:#991b1b;' : 'background:#f1f5f9;color:#475569;'}">
+                      ${l.update_required ? '🔒 Forced' : 'Off'}
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `
+      }
+
+      window.toggleForceUpdate = async function(lenderId, current) {
+        const newVal = !current
+        const { error } = await supabase.from('lenders').update({ update_required: newVal }).eq('id', lenderId)
+        if (error) { alert('Error updating lender: ' + error.message); return }
+        await supabase.from('audit_log').insert([{
+          lender_id: adminLenderId,
+          action: newVal ? 'force_update_enabled' : 'force_update_disabled',
+          details: { message: `Admin ${newVal ? 'enabled' : 'disabled'} force update for lender ${lenderId}`, target_lender_id: lenderId }
+        }])
+        loadLenderManagement()
+      }
+
+      window.forceUpdateAll = async function() {
+        if (!confirm('Force ALL active lenders to update their payment records? This will restrict access for all lenders immediately.')) return
+        const btn = document.querySelector('[onclick="forceUpdateAll()"]')
+        btn.textContent = 'Forcing...'
+        btn.disabled = true
+
+        const { data: lenders } = await supabase.from('lenders').select('id').eq('status', 'active')
+        if (!lenders) { btn.textContent = 'Force All to Update'; btn.disabled = false; return }
+
+        await supabase.from('lenders').update({ update_required: true }).eq('status', 'active')
+        await supabase.from('audit_log').insert([{
+          action: 'force_update_all',
+          lender_id: adminLenderId,
+          details: { message: `Admin forced all ${lenders.length} lenders to update payment records` }
+        }])
+
+        await loadLenderManagement()
+        btn.textContent = `Done — ${lenders.length} flagged`
+        setTimeout(() => { btn.textContent = 'Force All to Update'; btn.disabled = false }, 3000)
       }
 
       /* ── SIGN OUT ── */
@@ -583,6 +701,7 @@
       loadApplications()
       loadDisputes()
       loadAnalytics()
+      loadLenderManagement()
 // Auto-open analytics tab if coming from sidebar
       const savedTab = localStorage.getItem('admin-tab')
       if (savedTab === 'analytics') {
@@ -598,18 +717,26 @@
 
       async function loadAnalytics() {
         try {
-        const { data: lenders } = await supabase.from('lenders').select('id, full_name, district, status, created_at')
-        const { data: records } = await supabase.from('records').select('id, status, borrower_district, created_at')
-        const { data: disputes } = await supabase.from('disputes').select('id, status')
-
         const monthStart = new Date()
         monthStart.setDate(1)
         monthStart.setHours(0,0,0,0)
-        const { data: queries } = await supabase.from('queries').select('id, created_at').gte('created_at', monthStart.toISOString())
 
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        const { data: recentQueries } = await supabase.from('queries').select('id, created_at').gte('created_at', sevenDaysAgo.toISOString())
+
+        const [
+          { data: lenders },
+          { data: records },
+          { data: disputes },
+          { data: queries },
+          { data: recentQueries }
+        ] = await Promise.all([
+          supabase.from('lenders').select('id, full_name, district, status, created_at'),
+          supabase.from('records').select('id, status, borrower_district, created_at'),
+          supabase.from('disputes').select('id, status'),
+          supabase.from('queries').select('id, created_at').gte('created_at', monthStart.toISOString()),
+          supabase.from('queries').select('id, created_at').gte('created_at', sevenDaysAgo.toISOString())
+        ])
 
         document.getElementById('analytics-lenders').textContent = lenders ? lenders.filter(l => l.status === 'active').length : 0
         document.getElementById('analytics-records').textContent = records ? records.length : 0

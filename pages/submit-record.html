@@ -21,6 +21,13 @@
       .form-actions { display: flex; gap: 12px; margin-top: 1.5rem; }
       .btn-cancel { padding: 11px 20px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
       .section-gap { margin-top: 1.5rem; }
+      .warning-banner { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+      .warning-banner p { font-size: 13px; color: #92400e; margin-bottom: 8px; }
+      .warning-banner strong { color: #78350f; }
+      .btn-confirm-duplicate { padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; margin-right: 8px; }
+      .btn-confirm-duplicate:hover { background: #d97706; }
+      .btn-cancel-duplicate { padding: 8px 16px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; cursor: pointer; }
+      .btn-cancel-duplicate:hover { background: #f8fafc; }
     </style>
   </head>
   <body style="visibility:hidden;">
@@ -143,7 +150,6 @@
                 <option value="">Select frequency</option>
                 <option value="daily">Daily / දිනපතා</option>
                 <option value="weekly">Weekly / සතිපතා</option>
-                <option value="biweekly">Biweekly / සති දෙකකට වරක්</option>
                 <option value="monthly">Monthly / මාසිකව</option>
               </select>
             </div>
@@ -157,7 +163,11 @@
             </div>
           </div>
 
-          <div class="form-grid">
+          <div class="form-grid-3">
+            <div class="field">
+              <label>Disbursed Date / මුදල් නිකුත් කළ දිනය *</label>
+              <input type="date" id="disbursed_date" />
+            </div>
             <div class="field">
               <label>Next Due Date / ඊළඟ ගෙවීමේ දිනය</label>
               <input type="date" id="next_due_date" />
@@ -184,6 +194,7 @@
             </label>
           </div>
 
+          <div id="duplicate-warning" style="display:none;"></div>
           <div id="error-msg" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;"></div>
 
           <div class="form-actions">
@@ -210,6 +221,21 @@
         document.getElementById('lender-name').textContent = phone
       }
 
+      let duplicateConfirmed = false
+
+      window.confirmDuplicate = function() {
+        duplicateConfirmed = true
+        document.getElementById('duplicate-warning').style.display = 'none'
+        window.submitRecord()
+      }
+
+      window.cancelDuplicate = function() {
+        document.getElementById('duplicate-warning').style.display = 'none'
+        const button = document.querySelector('.btn-primary')
+        button.textContent = 'Submit Record / වාර්තාව ඉදිරිපත් කරන්න'
+        button.disabled = false
+      }
+
       window.submitRecord = async function() {
 
         const borrower_nic = document.getElementById('borrower_nic').value.trim()
@@ -224,6 +250,7 @@
         const installment_frequency = document.getElementById('installment_frequency').value
         const total_installments = document.getElementById('total_installments').value
         const installments_paid = document.getElementById('installments_paid').value
+        const disbursed_date = document.getElementById('disbursed_date').value
         const next_due_date = document.getElementById('next_due_date').value
         const last_repayment_date = document.getElementById('last_repayment_date').value
         const notes = document.getElementById('notes').value.trim()
@@ -231,8 +258,14 @@
 
         const errorMsg = document.getElementById('error-msg')
 
-        if (!borrower_nic || !borrower_name || !record_type || !loan_amount || !outstanding) {
+        if (!borrower_nic || !borrower_name || !record_type || !loan_amount || !outstanding || !disbursed_date) {
           errorMsg.textContent = 'Please fill in all required fields. / කරුණාකර සියලු අවශ්‍ය තොරතුරු පුරවන්න.'
+          errorMsg.style.display = 'block'
+          return
+        }
+
+        if (disbursed_date > new Date().toISOString().split('T')[0]) {
+          errorMsg.textContent = 'Disbursed date cannot be in the future. / මුදල් නිකුත් කළ දිනය අනාගතයේ විය නොහැක.'
           errorMsg.style.display = 'block'
           return
         }
@@ -262,6 +295,35 @@
           return
         }
 
+        // Duplicate check — warn if this lender already has records for this NIC
+        if (!duplicateConfirmed) {
+          const { data: existingLoans } = await supabase
+            .from('records')
+            .select('id, record_type, loan_amount, status')
+            .eq('lender_id', lenderData.id)
+            .eq('borrower_nic', borrower_nic)
+
+          if (existingLoans && existingLoans.length > 0) {
+            const activeCount = existingLoans.filter(r => r.status === 'active').length
+            const summary = existingLoans.map(r => `${r.record_type} — LKR ${parseFloat(r.loan_amount).toLocaleString()}`).join(', ')
+            document.getElementById('duplicate-warning').innerHTML = `
+              <div class="warning-banner">
+                <p><strong>This borrower already has ${existingLoans.length} loan${existingLoans.length > 1 ? 's' : ''} on your account${activeCount > 0 ? ` (${activeCount} active)` : ''}.</strong><br>
+                Existing: ${summary}<br><br>
+                Are you sure you want to add another loan for this borrower?</p>
+                <button class="btn-confirm-duplicate" onclick="confirmDuplicate()">Yes, Add Another Loan</button>
+                <button class="btn-cancel-duplicate" onclick="cancelDuplicate()">Cancel</button>
+              </div>
+            `
+            document.getElementById('duplicate-warning').style.display = 'block'
+            button.textContent = 'Submit Record / වාර්තාව ඉදිරිපත් කරන්න'
+            button.disabled = false
+            return
+          }
+        }
+
+        duplicateConfirmed = false
+
         const { error } = await supabase
           .from('records')
           .insert([{
@@ -278,6 +340,7 @@
             installment_frequency: installment_frequency || null,
             total_installments: total_installments ? parseInt(total_installments) : null,
             installments_paid: installments_paid ? parseInt(installments_paid) : 0,
+            disbursed_date,
             next_due_date: next_due_date || null,
             last_repayment_date: last_repayment_date || null,
             notes: notes || null,

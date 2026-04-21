@@ -2,13 +2,16 @@
 // ── Clarix Service Worker               ──
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'clarix-v1'
+const CACHE_NAME = 'clarix-v3'
 
 const STATIC_ASSETS = [
+  '/index.html',
+  '/manifest.json',
   '/css/style.css',
   '/css/sidebar.css',
   '/js/supabase.js',
   '/js/sidebar.js',
+  '/js/enforcement.js',
   '/js/lang.js',
   '/js/translations.js',
   '/pages/dashboard.html',
@@ -17,6 +20,8 @@ const STATIC_ASSETS = [
   '/pages/my-records.html',
   '/pages/bulk-upload.html',
   '/pages/admin.html',
+  '/pages/apply.html',
+  '/pages/update-required.html',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ]
@@ -57,9 +62,10 @@ self.addEventListener('fetch', event => {
         }
         return response
       })
-      .catch(() => {
-        // Network failed — try cache
-        return caches.match(event.request)
+      .catch(async () => {
+        // Network failed — try cache, fall back to a well-formed 504
+        const cached = await caches.match(event.request)
+        return cached || new Response('', { status: 504, statusText: 'Offline and not cached' })
       })
   )
 })

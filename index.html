@@ -56,6 +56,9 @@
     <script type="module">
       import { supabase } from './js/supabase.js'
 
+      document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') signIn() })
+      document.getElementById('phone').addEventListener('keydown', e => { if (e.key === 'Enter') signIn() })
+
       window.signIn = async function() {
 
         const phone = document.getElementById('phone').value.trim()
