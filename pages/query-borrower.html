@@ -122,6 +122,27 @@
       .risk-signal-medium { background: rgba(234,88,12,0.12); color: #9a3412; }
       .risk-signal-low { background: rgba(22,163,74,0.12); color: #166534; }
 
+      /* ── Reason chips with delta badges ── */
+      .risk-reason { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; padding: 3px 9px 3px 4px; border-radius: 20px; }
+      .reason-delta { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: rgba(255,255,255,0.7); font-weight: bold; min-width: 28px; text-align: center; }
+      .risk-reason-high { background: rgba(220,38,38,0.12); color: #991b1b; }
+      .risk-reason-medium { background: rgba(234,88,12,0.12); color: #9a3412; }
+      .risk-reason-low { background: rgba(22,163,74,0.12); color: #166534; }
+
+      /* ── Unknown (first-time borrower) variant ── */
+      .risk-header.unknown { background: #fef3c7; border-bottom: 1px solid #fde68a; }
+      .risk-icon.unknown { background: #d97706; }
+      .risk-label.unknown { color: #92400e; font-size: 16px; font-weight: bold; }
+      .risk-sublabel.unknown { color: #b45309; font-size: 12px; margin-top: 2px; }
+
+      .no-result.no-result-unknown { background: #fffbeb; border: 1px solid #fde68a; text-align: left; padding: 2rem; }
+      .no-result-unknown .no-result-icon-badge { display: inline-flex; width: 56px; height: 56px; border-radius: 50%; background: #d97706; color: white; font-size: 26px; font-weight: bold; align-items: center; justify-content: center; margin-bottom: 1rem; }
+      .no-result-unknown .no-result-title { color: #92400e; font-size: 17px; font-weight: bold; margin-bottom: 4px; }
+      .no-result-unknown .no-result-sub { color: #78350f; font-size: 13px; }
+      .no-result-actions { list-style: none; padding: 0; margin: 12px 0 0 0; display: flex; flex-direction: column; gap: 6px; }
+      .no-result-actions li { color: #92400e; font-size: 13px; padding-left: 20px; position: relative; }
+      .no-result-actions li::before { content: '→'; position: absolute; left: 0; color: #d97706; font-weight: bold; }
+
       /* ── Profile Card ── */
       .profile-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 3fr; overflow: hidden; }
       .profile-avatar-side { background: #f1f5f9; display: flex; align-items: center; justify-content: center; padding: 1.5rem; border-right: 1px solid #e2e8f0; }
@@ -162,7 +183,7 @@
         <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
 
         <h1 class="dash-title">Query a Borrower</h1>
-        <p class="dash-subtitle">Search the Clarix network by NIC number / ජාතික හැඳුනුම්පත් අංකයෙන් සොයන්න</p>
+        <p class="dash-subtitle">Search the Clarix network by NIC number /ජාතික හැඳුනුම්පත් අංකයෙන් සොයන්න</p>
 
         <div class="search-card">
           <p style="font-size:13px;color:#475569;margin-bottom:4px;">Enter Borrower NIC / ජාතික හැඳුනුම්පත් අංකය</p>
@@ -214,6 +235,7 @@
 
     <script type="module">
       import { supabase } from '../js/supabase.js'
+      import { calculateRisk } from '../js/risk.js'
 
       let currentLenderId = null
       let selectedRecordId = null
@@ -246,148 +268,6 @@
         if (btn && btn.dataset.recordId) window.openDisputeModal(btn.dataset.recordId)
       })
 
-      function calculateRisk(records) {
-        if (!records || records.length === 0) {
-          return { level: 'low', score: 0, label: 'LOW RISK', sublabel: 'No records found. New borrower to the network.', signals: [] }
-        }
-
-        let score = 0
-        const signals = []
-        const today = new Date()
-        const MS_PER_DAY = 86400000
-
-        const active = records.filter(r => r.status === 'active')
-        const defaulters = records.filter(r => r.status === 'defaulter')
-        const partialDefault = records.filter(r => r.status === 'partial_default')
-        const settled = records.filter(r => r.status === 'settled')
-
-        // Base status scores
-        if (defaulters.length > 0) {
-          score += defaulters.length * 30
-          signals.push(`${defaulters.length} default${defaulters.length > 1 ? 's' : ''} on record`)
-        }
-        if (partialDefault.length > 0) {
-          score += partialDefault.length * 20
-          signals.push(`${partialDefault.length} partial default${partialDefault.length > 1 ? 's' : ''}`)
-        }
-        if (active.length > 0) {
-          score += active.length * 10
-          if (active.length >= 3) {
-            score += 15
-            signals.push(`${active.length} concurrent active loans`)
-          }
-        }
-        score -= settled.length * 5
-
-        // Recency of defaults — based on disbursement date when available (falls back to created_at).
-        // disbursed_date reflects when the loan actually happened in the real world, not when we logged it.
-        let recentDefaultFlagged = false
-        defaulters.forEach(r => {
-          const baseline = r.disbursed_date ? new Date(r.disbursed_date) : new Date(r.created_at)
-          const monthsAgo = (today - baseline) / (MS_PER_DAY * 30)
-          if (monthsAgo <= 6) {
-            score += 20
-            if (!recentDefaultFlagged) { signals.push('Recent default within 6 months'); recentDefaultFlagged = true }
-          } else if (monthsAgo <= 12) {
-            score += 10
-          }
-        })
-
-        // Loan stacking — multiple disbursements in a short window is a strong desperation/fraud signal.
-        const disbursements = records
-          .map(r => r.disbursed_date ? new Date(r.disbursed_date) : null)
-          .filter(Boolean)
-        const in30 = disbursements.filter(d => (today - d) / MS_PER_DAY <= 30).length
-        const in90 = disbursements.filter(d => (today - d) / MS_PER_DAY <= 90).length
-        const in180 = disbursements.filter(d => (today - d) / MS_PER_DAY <= 180).length
-        if (in30 >= 2) {
-          score += 25
-          signals.push(`${in30} loans disbursed in the last 30 days — possible loan stacking`)
-        } else if (in90 >= 3) {
-          score += 15
-          signals.push(`${in90} loans disbursed in the last 90 days`)
-        } else if (in180 >= 4) {
-          score += 10
-          signals.push(`${in180} loans disbursed in the last 6 months`)
-        }
-
-        // Overdue detection — active loans past next_due_date
-        const overdueLoans = active.filter(r => r.next_due_date && new Date(r.next_due_date) < today)
-        if (overdueLoans.length > 0) {
-          score += overdueLoans.length * 15
-          signals.push(`${overdueLoans.length} overdue active loan${overdueLoans.length > 1 ? 's' : ''}`)
-        }
-
-        // Payment pace — prefer velocity (paid vs expected-by-now via disbursed_date + frequency).
-        // Falls back to raw adherence ratio (paid/total) when disbursed_date or frequency is missing.
-        const periodDays = { daily: 1, weekly: 7, monthly: 30 }
-        let slowPace = 0, verySlowPace = 0, lowAdherence = 0
-        active.forEach(r => {
-          const paid = parseInt(r.installments_paid) || 0
-          const freq = r.installment_frequency
-          const total = parseInt(r.total_installments) || 0
-
-          if (r.disbursed_date && freq && periodDays[freq]) {
-            const daysSince = (today - new Date(r.disbursed_date)) / MS_PER_DAY
-            if (daysSince < 30) return  // Seasoning — too new to judge pace reliably
-            const expected = Math.floor(daysSince / periodDays[freq])
-            if (expected <= 0) return
-            const ratio = paid / expected
-            if (ratio < 0.25) { score += 20; verySlowPace++ }
-            else if (ratio < 0.5) { score += 10; slowPace++ }
-            else if (ratio >= 0.9) { score -= 4 }
-          } else if (total > 0) {
-            const adherence = paid / total
-            if (adherence < 0.25) { score += 12; lowAdherence++ }
-            else if (adherence < 0.5) { score += 6 }
-            else if (adherence >= 0.8) { score -= 4 }
-          }
-        })
-        if (verySlowPace > 0) signals.push(`${verySlowPace} loan${verySlowPace > 1 ? 's' : ''} paying far below schedule (<25% of expected pace)`)
-        if (slowPace > 0)     signals.push(`${slowPace} loan${slowPace > 1 ? 's' : ''} paying below schedule (<50% of expected pace)`)
-        if (lowAdherence > 0) signals.push(`${lowAdherence} loan${lowAdherence > 1 ? 's' : ''} with very low repayment adherence`)
-
-        // Stale active loans — no repayment in 60+ days
-        const staleActive = active.filter(r => {
-          if (!r.last_repayment_date) return false
-          const daysSince = (today - new Date(r.last_repayment_date)) / MS_PER_DAY
-          return daysSince > 60
-        })
-        if (staleActive.length > 0) {
-          score += staleActive.length * 10
-          signals.push(`${staleActive.length} loan${staleActive.length > 1 ? 's' : ''} with no repayment in 60+ days`)
-        }
-
-        // Outstanding amount thresholds
-        const totalOutstanding = records.reduce((sum, r) => sum + (parseFloat(r.outstanding) || 0), 0)
-        if (totalOutstanding > 500000) {
-          score += 25
-          signals.push('Total outstanding over LKR 500,000')
-        } else if (totalOutstanding > 200000) {
-          score += 15
-          signals.push('Total outstanding over LKR 200,000')
-        } else if (totalOutstanding > 100000) {
-          score += 10
-        }
-
-        score = Math.min(100, Math.max(0, score))
-
-        let level, label
-        if (defaulters.length > 0 || score >= 70) {
-          level = 'high'; label = 'HIGH RISK'
-        } else if (score >= 35) {
-          level = 'medium'; label = 'MEDIUM RISK'
-        } else {
-          level = 'low'; label = 'LOW RISK'
-        }
-
-        const sublabel = signals.length > 0
-          ? `Score: ${score}/100 — ${signals[0]}${signals.length > 1 ? ` +${signals.length - 1} more signal${signals.length > 2 ? 's' : ''}` : ''}`
-          : `Score: ${score}/100 — No significant risk signals found`
-
-        return { level, score, label, sublabel, signals }
-      }
-
       window.queryBorrower = async function() {
         const nic = document.getElementById('nic-input').value.trim()
         const resultArea = document.getElementById('result-area')
@@ -419,26 +299,43 @@
         }
 
         if (!records || records.length === 0) {
+          // First-time borrower = UNKNOWN, not LOW. "No data" is not the same as "safe".
           resultArea.innerHTML = `
-            <div class="no-result">
-              <div class="no-result-icon">✓</div>
-              <p class="no-result-title">No Records Found</p>
-              <p class="no-result-sub">NIC <strong>${nic}</strong> has no records on the Clarix network.</p>
-              <p class="no-result-sub" style="margin-top:4px;">This borrower appears to be new to the network.</p>
+            <div class="no-result no-result-unknown">
+              <div class="no-result-icon-badge">?</div>
+              <p class="no-result-title">UNKNOWN — First-Time Borrower</p>
+              <p class="no-result-sub">NIC <strong>${esc(nic)}</strong> has no records on the Clarix network.</p>
+              <p class="no-result-sub" style="margin-top:10px;font-weight:bold;">This is not a green light — treat as unknown risk.</p>
+              <ul class="no-result-actions">
+                <li>Verify identity with a physical NIC check</li>
+                <li>Ask for at least two references</li>
+                <li>Consider a smaller starter loan to build history</li>
+                <li>Re-query in 1–2 weeks to see if they appear elsewhere on the network</li>
+              </ul>
             </div>
           `
           return
         }
 
         currentRecords = records
-        const risk = calculateRisk(records)
+
+        // Fetch cross-lender payments + disputes in parallel for Wave 1 scoring signals.
+        const recordIds = records.map(r => r.id)
+        const [paymentsRes, disputesRes] = await Promise.all([
+          supabase.from('payments').select('record_id, amount').in('record_id', recordIds),
+          supabase.from('disputes').select('record_id').in('record_id', recordIds),
+        ])
+        const paymentsForScoring = paymentsRes.data || []
+        const disputesForScoring = disputesRes.data || []
+
+        const risk = calculateRisk(records, paymentsForScoring, disputesForScoring)
         const activeRecords = records.filter(r => r.status === 'active')
         const settledRecords = records.filter(r => r.status === 'settled')
         const totalOutstanding = records.reduce((sum, r) => sum + (parseFloat(r.outstanding) || 0), 0)
         const borrower = records[0]
         const firstSeen = new Date(records[records.length - 1].created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
-        const riskIcons = { high: '!', medium: '~', low: '✓' }
+        const riskIcons = { high: '!', medium: '~', low: '✓', unknown: '?' }
 
         resultArea.innerHTML = `
 
@@ -481,7 +378,7 @@
               <div style="flex:1;">
                 <p class="risk-label ${risk.level}">${risk.label}</p>
                 <p class="risk-sublabel ${risk.level}">${risk.sublabel}</p>
-                ${risk.signals.length > 0 ? `<div class="risk-signals">${risk.signals.map(s => `<span class="risk-signal risk-signal-${risk.level}">${s}</span>`).join('')}</div>` : ''}
+                ${risk.reasons.length > 0 ? `<div class="risk-signals">${risk.reasons.map(r => `<span class="risk-reason risk-reason-${risk.level}"><span class="reason-delta">${r.delta > 0 ? '+' : ''}${r.delta}</span>${esc(r.text)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="risk-score-badge risk-score-${risk.level}">
                 <span class="risk-score-number">${risk.score}</span>
@@ -656,6 +553,13 @@
       document.getElementById('nic-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') queryBorrower()
       })
+
+      // Deep-link support: insights.html → ?nic=… auto-runs the search.
+      const urlNic = new URLSearchParams(window.location.search).get('nic')
+      if (urlNic) {
+        document.getElementById('nic-input').value = urlNic
+        queryBorrower()
+      }
 
       window.signOut = async function() {
         await supabase.auth.signOut()

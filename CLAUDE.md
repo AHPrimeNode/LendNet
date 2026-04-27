@@ -31,6 +31,8 @@ lendnet/
     supabase.js        — Supabase client initialization
     sidebar.js         — reusable sidebar navigation component (auto-injects into any page)
     enforcement.js     — reads last_submission_at + update_required and gates access to the update-required page
+    risk.js            — single source of truth for calculateRisk(); shared by query-borrower and insights
+    service-worker.js  — PWA service worker
     lang.js            — language engine (built but not active)
     translations.js    — EN/SI translations (built but not active)
   pages/
@@ -38,13 +40,13 @@ lendnet/
     apply.html         — lender application form
     bulk-upload.html   — bulk records and bulk payments upload
     dashboard.html     — main dashboard with stats
+    insights.html      — lender-facing portfolio analytics (Wave 1: risk mix, concentration, benchmark, early warnings, 6-month trend)
     my-records.html    — lender's records + disputes tabs
-    query-borrower.html — query borrower by NIC with risk scoring
+    query-borrower.html — query borrower by NIC with risk scoring; supports ?nic=… deep-link from Insights
     submit-record.html — submit a single borrower record
     update-required.html — lock screen shown when a lender is flagged update_required or past the submission window
   index.html           — login page
   manifest.json        — PWA manifest
-  service-worker.js    — PWA service worker
 ```
 
 ## Database Tables (8 tables, all with RLS enabled)
@@ -91,16 +93,18 @@ Admin notices displayed to lenders.
 
 ## RLS Policies in Place
 - Disputes: INSERT and SELECT for authenticated users
-- Records: UPDATE (lenders own records only, admin any record), DELETE (admin only)
+- Records: UPDATE (lenders own records only, admin any record), DELETE (admin only). Both routed through `public.is_admin()`.
+- Lenders: UPDATE for own row OR admin (via `public.is_admin()`). Trigger `lenders_block_is_admin_change` rejects any client-side change to `is_admin` — only the SQL editor (postgres role) can flip it.
 - Audit log: INSERT for authenticated users
 - Queries: SELECT for authenticated users where `lender_id` matches the lender row whose `phone` equals the local-part of the JWT email (added 2026-04 so the dashboard's "Queries This Month" card can read its own rows)
+- Payments: SELECT for authenticated users (added 2026-04-26 for cross-lender Wave 1 scoring — partial-payment-pattern signal). Notes column may contain PII; future hardening: replace with a view exposing only `(record_id, amount)`.
 
 ## Sidebar Navigation (sidebar.js)
 - Auto-injects into any page that includes `<script type="module" src="../js/sidebar.js"></script>`
 - Detects current page from URL for active highlighting
 - Shows Admin Panel link only when the lender row has `is_admin = true` (fetched once at sidebar init)
 - Sidebar state (open/closed) persists in localStorage
-- Nav items: Dashboard, Query Borrower, Submit Record, My Records, Bulk Upload
+- Nav items: Dashboard, Query Borrower, Submit Record, My Records, Bulk Upload, Insights
 - Admin section: Admin Panel, Analytics
 
 ## Features Built and Working
@@ -116,18 +120,28 @@ Admin notices displayed to lenders.
 - Quick action buttons to Query, Submit Record, My Records
 
 ### 3. Query Borrower
-- Search by NIC across entire network
-- Rule-based risk scoring (0-100 with HIGH/MEDIUM/LOW) in `calculateRisk()`. Signals include:
-  - **Status mix:** defaulter (+30 each), partial_default (+20), active (+10), +15 bonus for 3+ concurrent active. Settled loans subtract (-5 each).
-  - **Loan stacking** *(disbursed_date-driven)*: 2+ disbursements in 30 days = +25 (strong fraud signal), 3+ in 90 days = +15, 4+ in 180 days = +10.
-  - **Payment velocity** *(disbursed_date-driven)*: compares `installments_paid` vs expected-by-now given frequency. <25% of pace = +20, <50% = +10, ≥90% = -4. Loans under 30 days old are skipped (seasoning). Falls back to the older `paid/total` adherence ratio when `disbursed_date` or `installment_frequency` is missing.
-  - **Default recency**: uses `disbursed_date` as baseline (not `created_at`) — defaults ≤6 months = +20, ≤12 months = +10.
-  - **Overdue** active loans (past `next_due_date`): +15 each.
+- Search by NIC across entire network. Supports `?nic=…` deep-link from Insights → Early Warnings rows.
+- Rule-based risk scoring (0-100 with HIGH/MEDIUM/LOW/UNKNOWN) lives in **`js/risk.js`** as `calculateRisk(records, payments, disputes)`. Single source of truth — imported by both `query-borrower.html` and `insights.html`. Tune weights in one place.
+- Signature: returns `{ level, score, label, sublabel, reasons: [{text, delta}] }`. UI renders each reason as a chip with its `+/-NN` delta badge so lenders see WHY a score is what it is.
+- **Wave 1 signals (2026-04-26):**
+  - **Status mix:** defaulter (+30 each), partial_default (+20), active (+10), +15 bonus for 3+ concurrent active, settled loans (-5 each, positive history).
+  - **Loan stacking** *(disbursed_date)*: 2+ disbursements in 30 days = +25, 3+ in 90 days = +15, 4+ in 180 days = +10.
+  - **Payment velocity** *(disbursed_date+frequency)*: <25% of pace = +20, <50% = +10, ≥90% = -4. Skips loans <30 days old (seasoning). Falls back to `paid/total` adherence when frequency missing.
+  - **Default recency** *(disbursed_date)*: ≤6 months = +20, 6–12 months = +10.
+  - **Overdue** active loans: +15 each.
   - **Stale** active loans (no repayment in 60+ days): +10 each.
-  - **Total outstanding**: >LKR 500k = +25, >200k = +15, >100k = +10.
-- Thresholds: score ≥70 or any defaulter → HIGH; ≥35 → MEDIUM; else LOW. Scoring rules are live-adjusted as real data lands — don't treat the numbers as final.
-- PDPA query logging to `queries` table
-- Flag button on each record to raise disputes
+  - **Total outstanding**: >500k = +25, >200k = +15, >100k = +10.
+  - **Multi-lender shopping:** 5+ different lenders = +25, 3–4 = +15.
+  - **Partial-payment pattern:** active loans where average payment < 70% of `installment_amount` (with ≥3 payments recorded) = +12 each.
+  - **Repeat loans same lender:** any lender that issued 2+ disbursements ≤60 days apart = +15 per such lender.
+  - **Collateral reuse:** same collateral string pledged on multiple active loans = +20.
+  - **Dispute history:** records previously flagged in disputes = +5 each, capped at +15.
+  - **Loan-size escalation:** most recent loan ≥ 2× the historical median = +10.
+- Thresholds: any defaulter or score ≥70 → HIGH; ≥35 → MEDIUM; else LOW. Score is clamped to [0, 100].
+- **UNKNOWN band (first-time borrower):** when the network has zero records for the NIC, the UI shows an orange `?` card titled "UNKNOWN — First-Time Borrower" with cautious next-step guidance. Replaces the previous green "no records" check — "no data" ≠ "safe".
+- Scoring weights are provisional. The user will tune as real data lands.
+- PDPA query logging to `queries` table.
+- Flag button on each record to raise disputes.
 
 ### 4. Submit Record
 - Full form with borrower details, loan details, installment tracking
@@ -186,12 +200,33 @@ Admin notices displayed to lenders.
 ### 10. PWA (code complete, untested)
 - manifest.json, service-worker.js, icon-192.png, icon-512.png
 - Added to all pages but untested (Netlify credits expired)
-- Cache name is versioned (`clarix-v3`); bump when cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `apply.html` and `update-required.html`), all CSS, and `js/enforcement.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+- Cache name is versioned (`clarix-v4`); bump when cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
 
-### 11. Sinhala Language Toggle (built but deactivated)
+### 11. Insights Dashboard (lender-facing analytics, 2026-04-26)
+- Separate page at `pages/insights.html` — chosen over a dashboard widget so the analytics view feels professional and has room to breathe.
+- Imports `calculateRisk` from `../js/risk.js` so portfolio scores match Query Borrower exactly (single source of truth).
+- Data flow: parallel queries for lender's records, network records (joined on the active NICs in the lender's portfolio), all related payments, and disputes — then `calculateRisk` is run per borrower NIC against the network view, so an active borrower with troubles at *other* lenders surfaces here too.
+- Sections:
+  - **Stat cards:** total active borrowers, my outstanding (LKR), default rate (color-coded vs network avg when portfolio ≥5 records), active loan count.
+  - **Risk mix:** bar breakdown of HIGH / MEDIUM / LOW / UNKNOWN across the lender's active borrowers.
+  - **Status mix:** active / partial_default / defaulter / settled bars.
+  - **Top borrowers / Top districts:** concentration analysis — flags single-borrower or single-district exposure.
+  - **Early warnings:** top 10 riskiest active borrowers by score, each row clickable → deep-links to `query-borrower.html?nic=…` (auto-runs the search on landing).
+  - **6-month trend:** disbursements per month over the last 6 months.
+- Insights page is exempt from enforcement gating? **No** — covered by the standard sidebar enforcement check; insights for a locked-out lender don't help.
+
+### 12. Sinhala Language Toggle (built but deactivated)
 - translations.js and lang.js created and ready
 - Toggle button removed from sidebar
 - Decision: skipped because target users know basic English
+
+## April 26, 2026 — Wave 1 scoring + Insights + admin role refactor
+- **Admin gating moved to DB:** added `is_admin BOOLEAN NOT NULL DEFAULT false` to `lenders`. Created `public.is_admin()` SECURITY DEFINER helper that reads the JWT email, strips `@clarix.lk`, and returns the lender's flag — RLS policies and client pages now call this instead of comparing emails. Hardcoded `ADMIN_EMAIL` removed from `sidebar.js` and `admin.html`. Trigger `lenders_block_is_admin_change` rejects any client-side `UPDATE` to `is_admin` (raises P0001), so even if RLS is misconfigured the flag can't be flipped from the browser. Why: admins should not be inferable from client-side string compares anyone can see in DevTools, and the trigger means promotion can only happen from the SQL editor (postgres role) — i.e. by Clarix itself.
+- **Risk scoring extracted to `js/risk.js`** as a single `calculateRisk(records, payments, disputes)` export. Imported by both `query-borrower.html` and `insights.html` so weights live in exactly one file. Return shape is `{ level, score, label, sublabel, reasons: [{text, delta}] }` — UI renders each reason as a chip with its `+/-NN` badge so lenders see the *why* behind the score.
+- **Wave 1 signals added** (see Query Borrower §3 for full list/weights): multi-lender shopping, partial-payment pattern, repeat loans from the same lender ≤60 days apart, collateral reuse across active loans, dispute history, loan-size escalation. Plus an UNKNOWN risk band for first-time borrowers — replaces the previous green "no records" check, because no data is not safe data.
+- **Insights page** added at `pages/insights.html` — see Feature §11.
+- **Payments SELECT RLS policy** added so cross-lender payment data is visible to the partial-payment-pattern signal. Notes column may contain PII — flagged for future view-based hardening (expose only `(record_id, amount)`).
+- **Service worker bumped to `clarix-v4`** with `js/risk.js` and `pages/insights.html` added to STATIC_ASSETS.
 
 ## April 21, 2026 — disbursed_date + onboarding enforcement
 - **Test data wiped** — `TRUNCATE public.audit_log, public.disputes, public.queries, public.payments, public.records RESTART IDENTITY CASCADE`. `lenders`, `applications`, `announcements`, and Supabase Auth users preserved. Done because we're still pre-launch (no real lenders), so a schema break was cheaper than a backfill.
@@ -214,7 +249,7 @@ Admin notices displayed to lenders.
 - **Compliance threshold:** see Bulk Upload §7.
 
 ## Pending Follow-ups
-- **Admin-aware RLS policy sweep:** the client-side admin gate is done (`is_admin` column + `public.is_admin()` helper), but any existing RLS policies that hardcode the admin email (`auth.jwt() ->> 'email' = '0771234567@clarix.lk'`) still need to be rewritten to call `public.is_admin()`. Run `SELECT policyname, tablename, qual, with_check FROM pg_policies WHERE schemaname = 'public';` to list them, then drop/recreate any that reference the hardcoded email.
+- **Payments PII hardening:** the cross-lender payments SELECT policy exposes the full row including `notes`. Replace with a view limited to `(record_id, amount)` for the scoring path; keep full-row access RLS-scoped to the lender who owns the payment.
 
 ## Features Deferred
 - Borrower Self-Lookup Portal — deferred for now
@@ -222,8 +257,8 @@ Admin notices displayed to lenders.
 - Quick Payment screen — skipped in favor of Bulk Payments
 
 ## Features Still to Build
-- AI Risk Scoring (rule-based Wave 1) — enhance current scoring
-- AI Insights Dashboard — lender-facing intelligence
+- AI Risk Scoring (rule-based Wave 1) — ✅ shipped 2026-04-26
+- AI Insights Dashboard — ✅ shipped 2026-04-26
 
 ## Paid Features (defer until pre-launch)
 - PayHere payment gateway
