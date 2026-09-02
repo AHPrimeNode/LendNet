@@ -32,6 +32,7 @@ lendnet/
     sidebar.js         — reusable sidebar navigation component (auto-injects into any page)
     enforcement.js     — reads last_submission_at + update_required and gates access to the update-required page
     risk.js            — single source of truth for calculateRisk(); shared by query-borrower and insights
+    install.js         — catches beforeinstallprompt and shows the Install Clarix bar (see §10)
     lang.js            — language engine (built but not active)
     translations.js    — EN/SI translations (built but not active)
   pages/
@@ -208,11 +209,16 @@ Admin notices displayed to lenders.
   4. **`apply.html`** had the manifest link but no service-worker registration.
 - **Fix:** `service-worker.js` moved to the repo root (root scope, no `Service-Worker-Allowed` header needed — Netlify does not send one), `insights.html` pointed at `/service-worker.js`, and manifest + `theme-color` + `apple-touch-icon` + registration added to `index.html`, registration added to `apply.html`. All 10 HTML pages now register the same root path.
 - **Do not move `service-worker.js` back into `js/`.** Scope is derived from the file's served directory.
-- Cache name is versioned (now `clarix-v5`, bumped for the path change); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
-- `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 21 listed paths resolve. Re-verify after any file rename.
+- Cache name is versioned (now `clarix-v6`, bumped for the path change and `js/install.js`); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+- `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 22 listed paths resolve. Re-verify after any file rename.
 - Icons check out: exactly 192×192 and 512×512, full-bleed blue background with a centred "C", so `"purpose": "any maskable"` is safe (glyph sits inside the maskable safe zone and won't get cropped on Android).
-- **Verified so far (2026-09-02):** deployed asset audit over HTTPS (all 200s, correct MIME types), local static-server smoke test, manifest JSON validity and required install fields, STATIC_ASSETS existence, icon dimensions.
-- **Still needs a real browser, on the deployed site, after the fix ships:** install prompt / add-to-homescreen, offline mode with the network cut, and service-worker activation in DevTools → Application. The fixes are not deployed yet.
+- **Verified deployed (2026-09-02):** all 21 STATIC_ASSETS return 200 over HTTPS with correct MIME types, old `/js/service-worker.js` correctly 404s, all 10 pages serve the root registration and a manifest link, manifest is valid JSON with the required install fields, icons are exactly 192×192 / 512×512.
+- **Desktop Chrome confirmed installable by the user. Android showed no prompt at all** — diagnosed as a missing install handler, not a manifest failure:
+  - Desktop Chrome puts its own install icon in the address bar for almost any page, so a desktop prompt does **not** prove the install criteria pass. Android is the strict path.
+  - Android Chrome no longer shows the automatic mini-infobar. A site must catch `beforeinstallprompt` and render its own affordance, otherwise the only route in is ⋮ → Install app. Clarix had **no `beforeinstallprompt` handler anywhere**, so Android had nothing to show.
+- **`js/install.js` (added 2026-09-02):** plain non-module script included on all 10 pages. Catches `beforeinstallprompt`, calls `preventDefault()`, and shows a bottom "Install Clarix" bar with Install / dismiss. Dismissing or declining snoozes for 7 days via `localStorage` key `clarix_install_snoozed_until`. Bails out early when already running standalone. Listens for `appinstalled` to tear the bar down. A `beforeinstallprompt` event is single-use — it is nulled after `prompt()` regardless of outcome.
+- **Manifest icon purposes split (2026-09-02):** was two entries each with `"purpose": "any maskable"`; now four entries — explicit `any` at 192/512 and explicit `maskable` at 192/512, same two PNG files. Legal either way, but separate entries are what Chrome documents and removes any Android ambiguity about an icon satisfying the `any` requirement.
+- **Still needs a browser check on Android after this ships:** the Install bar appearing, install completing, offline mode with the network cut, and worker activation in DevTools → Application.
 - `start_url` is `/pages/dashboard.html`, which requires auth — launching the installed app while logged out bounces to the login page. Works, but if a cleaner cold-launch is wanted, change `start_url` to `/`.
 
 ### 11. Insights Dashboard (lender-facing analytics, 2026-04-26)
