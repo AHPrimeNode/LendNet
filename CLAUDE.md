@@ -6,7 +6,7 @@ Clarix (formerly LendNet) is a shared credit intelligence network for Sri Lanka'
 ## Tech Stack
 - **Frontend:** Plain HTML + CSS + JavaScript (no frameworks)
 - **Backend/Database:** Supabase (PostgreSQL), Singapore region
-- **Hosting:** Netlify at `clarix-lk.netlify.app` (currently paused — free tier credits exhausted)
+- **Hosting:** Netlify at `clarix-lk.netlify.app` — live again as of 2026-09-02 (was paused when free-tier credits ran out)
 - **GitHub repo:** AHPrimeNode/LendNet
 - **Code editor:** VS Code on Windows
 - **Local testing:** Live Server (`live-server` in terminal)
@@ -32,7 +32,6 @@ lendnet/
     sidebar.js         — reusable sidebar navigation component (auto-injects into any page)
     enforcement.js     — reads last_submission_at + update_required and gates access to the update-required page
     risk.js            — single source of truth for calculateRisk(); shared by query-borrower and insights
-    service-worker.js  — PWA service worker
     lang.js            — language engine (built but not active)
     translations.js    — EN/SI translations (built but not active)
   pages/
@@ -47,6 +46,9 @@ lendnet/
     update-required.html — lock screen shown when a lender is flagged update_required or past the submission window
   index.html           — login page
   manifest.json        — PWA manifest
+  service-worker.js    — PWA service worker. MUST stay at repo root: a service worker's
+                         default scope is its own directory, so serving it from js/ meant
+                         it could never control /index.html or /pages/*. See §10.
 ```
 
 ## Database Tables (8 tables, all with RLS enabled)
@@ -197,10 +199,21 @@ Admin notices displayed to lenders.
 - Admin-only section
 - Analytics shortcut link
 
-### 10. PWA (code complete, untested)
-- manifest.json, service-worker.js, icon-192.png, icon-512.png
-- Added to all pages but untested (Netlify credits expired)
-- Cache name is versioned (`clarix-v4`); bump when cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+### 10. PWA (repaired 2026-09-02 — was fully non-functional in production)
+- `manifest.json`, `service-worker.js` (repo root), `icons/icon-192.png`, `icons/icon-512.png`
+- **The PWA never worked once deployed.** Four defects, all found and fixed on 2026-09-02 once Netlify came back online and the deployed site could actually be probed:
+  1. **Registration path 404.** Seven pages registered `/service-worker.js`, but the file lived at `js/service-worker.js`. `https://clarix-lk.netlify.app/service-worker.js` returned **404** — the service worker never installed on those pages.
+  2. **Wrong scope on the one page that did work.** `insights.html` registered the real path `/js/service-worker.js`, which succeeded but took the default scope `/js/`. A worker scoped to `/js/` cannot intercept navigations to `/index.html` or `/pages/*`, so it cached nothing useful.
+  3. **`index.html` had no PWA wiring at all** — no manifest link, no `theme-color`, no registration. That is the login page and the site's entry point, so the install prompt could never fire where users actually land.
+  4. **`apply.html`** had the manifest link but no service-worker registration.
+- **Fix:** `service-worker.js` moved to the repo root (root scope, no `Service-Worker-Allowed` header needed — Netlify does not send one), `insights.html` pointed at `/service-worker.js`, and manifest + `theme-color` + `apple-touch-icon` + registration added to `index.html`, registration added to `apply.html`. All 10 HTML pages now register the same root path.
+- **Do not move `service-worker.js` back into `js/`.** Scope is derived from the file's served directory.
+- Cache name is versioned (now `clarix-v5`, bumped for the path change); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+- `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 21 listed paths resolve. Re-verify after any file rename.
+- Icons check out: exactly 192×192 and 512×512, full-bleed blue background with a centred "C", so `"purpose": "any maskable"` is safe (glyph sits inside the maskable safe zone and won't get cropped on Android).
+- **Verified so far (2026-09-02):** deployed asset audit over HTTPS (all 200s, correct MIME types), local static-server smoke test, manifest JSON validity and required install fields, STATIC_ASSETS existence, icon dimensions.
+- **Still needs a real browser, on the deployed site, after the fix ships:** install prompt / add-to-homescreen, offline mode with the network cut, and service-worker activation in DevTools → Application. The fixes are not deployed yet.
+- `start_url` is `/pages/dashboard.html`, which requires auth — launching the installed app while logged out bounces to the login page. Works, but if a cleaner cold-launch is wanted, change `start_url` to `/`.
 
 ### 11. Insights Dashboard (lender-facing analytics, 2026-04-26)
 - Separate page at `pages/insights.html` — chosen over a dashboard widget so the analytics view feels professional and has room to breathe.
