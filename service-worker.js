@@ -2,9 +2,10 @@
 // ── Clarix Service Worker               ──
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'clarix-v6'
+const CACHE_NAME = 'clarix-v7'
 
 const STATIC_ASSETS = [
+  '/',
   '/index.html',
   '/manifest.json',
   '/css/style.css',
@@ -67,7 +68,10 @@ self.addEventListener('fetch', event => {
       })
       .catch(async () => {
         // Network failed — try cache, fall back to a well-formed 504
-        const cached = await caches.match(event.request)
+        // ignoreVary: esm.sh serves the supabase-js entry module with
+        // `Vary: User-Agent`, which can make an exact match miss offline and
+        // break every page's imports. Any cached copy beats a 504.
+        const cached = await caches.match(event.request, { ignoreVary: true })
         return cached || new Response('', { status: 504, statusText: 'Offline and not cached' })
       })
   )

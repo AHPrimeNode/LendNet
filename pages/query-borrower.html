@@ -322,7 +322,8 @@
         // Fetch cross-lender payments + disputes in parallel for Wave 1 scoring signals.
         const recordIds = records.map(r => r.id)
         const [paymentsRes, disputesRes] = await Promise.all([
-          supabase.from('payments').select('record_id, amount').in('record_id', recordIds),
+          // RPC exposes only (record_id, amount) — full payments rows are RLS-scoped to their owner.
+          supabase.rpc('payment_amounts', { p_record_ids: recordIds }),
           supabase.from('disputes').select('record_id').in('record_id', recordIds),
         ])
         const paymentsForScoring = paymentsRes.data || []

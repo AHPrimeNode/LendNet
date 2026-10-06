@@ -100,7 +100,7 @@ Admin notices displayed to lenders.
 - Lenders: UPDATE for own row OR admin (via `public.is_admin()`). Trigger `lenders_block_is_admin_change` rejects any client-side change to `is_admin` — only the SQL editor (postgres role) can flip it.
 - Audit log: INSERT for authenticated users
 - Queries: SELECT for authenticated users where `lender_id` matches the lender row whose `phone` equals the local-part of the JWT email (added 2026-04 so the dashboard's "Queries This Month" card can read its own rows)
-- Payments: SELECT for authenticated users (added 2026-04-26 for cross-lender Wave 1 scoring — partial-payment-pattern signal). Notes column may contain PII; future hardening: replace with a view exposing only `(record_id, amount)`.
+- Payments (hardened 2026-10-06, `sql/2026-10-06-payments-pii-hardening.sql`): full-row SELECT only for the lender who logged the payment, the lender who owns the record, or admin (policy `payments_select_own_or_admin`). Cross-lender scoring goes through RPC `public.payment_amounts(p_record_ids[])` — SECURITY DEFINER, returns only `(record_id, amount)`, caller must be a lender, EXECUTE granted to `authenticated` only. RPC chosen over a view because Supabase's advisor flags SECURITY DEFINER views. **Run that SQL before deploying the client change**, otherwise Query Borrower/Insights scoring calls a missing RPC.
 
 ## Sidebar Navigation (sidebar.js)
 - Auto-injects into any page that includes `<script type="module" src="../js/sidebar.js"></script>`
@@ -209,8 +209,8 @@ Admin notices displayed to lenders.
   4. **`apply.html`** had the manifest link but no service-worker registration.
 - **Fix:** `service-worker.js` moved to the repo root (root scope, no `Service-Worker-Allowed` header needed — Netlify does not send one), `insights.html` pointed at `/service-worker.js`, and manifest + `theme-color` + `apple-touch-icon` + registration added to `index.html`, registration added to `apply.html`. All 10 HTML pages now register the same root path.
 - **Do not move `service-worker.js` back into `js/`.** Scope is derived from the file's served directory.
-- Cache name is versioned (now `clarix-v6`, bumped for the path change and `js/install.js`); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
-- `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 22 listed paths resolve. Re-verify after any file rename.
+- Cache name is versioned (now `clarix-v7`, bumped 2026-10-06 for the payments RPC change + offline fixes); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+- `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 22 listed paths resolve (23 since `/` was added 2026-10-06). Re-verify after any file rename.
 - Icons check out: exactly 192×192 and 512×512, full-bleed blue background with a centred "C", so `"purpose": "any maskable"` is safe (glyph sits inside the maskable safe zone and won't get cropped on Android).
 - **Verified deployed (2026-09-02):** all 21 STATIC_ASSETS return 200 over HTTPS with correct MIME types, old `/js/service-worker.js` correctly 404s, all 10 pages serve the root registration and a manifest link, manifest is valid JSON with the required install fields, icons are exactly 192×192 / 512×512.
 - **Desktop Chrome confirmed installable by the user. Android showed no prompt at all** — diagnosed as a missing install handler, not a manifest failure:
@@ -219,7 +219,10 @@ Admin notices displayed to lenders.
 - **`js/install.js` (added 2026-09-02):** plain non-module script included on all 10 pages. Catches `beforeinstallprompt`, calls `preventDefault()`, and shows a bottom "Install Clarix" bar with Install / dismiss. Dismissing or declining snoozes for 7 days via `localStorage` key `clarix_install_snoozed_until`. Bails out early when already running standalone. Listens for `appinstalled` to tear the bar down. A `beforeinstallprompt` event is single-use — it is nulled after `prompt()` regardless of outcome.
 - **Manifest icon purposes split (2026-09-02):** was two entries each with `"purpose": "any maskable"`; now four entries — explicit `any` at 192/512 and explicit `maskable` at 192/512, same two PNG files. Legal either way, but separate entries are what Chrome documents and removes any Android ambiguity about an icon satisfying the `any` requirement.
 - **Android install confirmed working 2026-09-02** — the Install bar appears and the prompt fires on a real device. Desktop Chrome install was already confirmed. Note that a device carrying the old broken worker needs Chrome → Settings → Site settings → `clarix-lk.netlify.app` → **Clear & reset** first, otherwise it keeps serving stale HTML from the previous registration.
-- **Still unverified:** offline mode with the network cut, and worker activation/cache contents in DevTools → Application. Install works, so these are the remaining PWA checks.
+- **Offline verified 2026-10-06** (local server on 127.0.0.1, server killed mid-session): worker active at root scope and controlling the page; all STATIC_ASSETS present in cache; with the origin unreachable, `index.html` and every page shell load from cache and their JS runs (logged-out dashboard correctly redirects to login). Two fixes came out of it:
+  1. `/` was not precached → typing the bare domain offline gave a blank 504. Added `'/'` to STATIC_ASSETS.
+  2. The supabase-js entry module (`https://esm.sh/@supabase/supabase-js@2`) is served with `Vary: User-Agent`, so an exact `caches.match` can miss offline and break every page's imports. Fallback now uses `caches.match(request, { ignoreVary: true })`.
+- **Offline limits (by design):** only the app shell works offline. All data calls go to `supabase.co`, which the worker deliberately skips, so a logged-in lender offline sees pages with failed data loads, not cached data. esm.sh modules are runtime-cached on first use, not precached — a device that has only visited once before its worker took control may lack them. The esm.sh side was not tested with the internet fully cut (only the origin was down).
 - `start_url` is `/pages/dashboard.html`, which requires auth — launching the installed app while logged out bounces to the login page. Works, but if a cleaner cold-launch is wanted, change `start_url` to `/`.
 
 ### 11. Insights Dashboard (lender-facing analytics, 2026-04-26)
@@ -269,7 +272,7 @@ Admin notices displayed to lenders.
 - **Compliance threshold:** see Bulk Upload §7.
 
 ## Pending Follow-ups
-- **Payments PII hardening:** the cross-lender payments SELECT policy exposes the full row including `notes`. Replace with a view limited to `(record_id, amount)` for the scoring path; keep full-row access RLS-scoped to the lender who owns the payment.
+- **Run `sql/2026-10-06-payments-pii-hardening.sql`** in the Supabase SQL editor, check its final verify query shows only `payments_select_own_or_admin` for SELECT (and no `ALL` policy with `qual = true`), then deploy the client change and confirm Query Borrower still shows partial-payment signals for cross-lender borrowers.
 
 ## Features Deferred
 - Borrower Self-Lookup Portal — deferred for now

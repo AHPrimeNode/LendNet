@@ -198,7 +198,8 @@
 
         const [paymentsRes, disputesRes] = await Promise.all([
           networkRecordIds.length > 0
-            ? supabase.from('payments').select('record_id, amount').in('record_id', networkRecordIds)
+            // RPC exposes only (record_id, amount) — full payments rows are RLS-scoped to their owner.
+            ? supabase.rpc('payment_amounts', { p_record_ids: networkRecordIds })
             : Promise.resolve({ data: [] }),
           networkRecordIds.length > 0
             ? supabase.from('disputes').select('record_id').in('record_id', networkRecordIds)
