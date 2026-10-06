@@ -22,7 +22,8 @@ Clarix (formerly LendNet) is a shared credit intelligence network for Sri Lanka'
 ```
 lendnet/
   css/
-    style.css          — main stylesheet
+    tokens.css         — design tokens (colour, type, spacing, radius, motion). Load before style.css. No raw hex in components.
+    style.css          — base + shared components (buttons, fields, tiles, panels, badges, tabs, tables, modal, toast)
     sidebar.css        — sidebar navigation styles
   icons/
     icon-192.png       — PWA icon
@@ -31,6 +32,7 @@ lendnet/
     supabase.js        — Supabase client initialization
     sidebar.js         — reusable sidebar navigation component (auto-injects into any page)
     enforcement.js     — reads last_submission_at + update_required and gates access to the update-required page
+    ui.js              — toast() / alertDialog() / confirmDialog() / openModal() + form helpers validate() / fieldError() / setLoading(). Replaces native alert/confirm everywhere. Never use alert()/confirm() in pages. openModal bodyHTML is raw HTML — esc() every DB value.
     risk.js            — single source of truth for calculateRisk(); shared by query-borrower and insights
     install.js         — catches beforeinstallprompt and shows the Install Clarix bar (see §10)
     lang.js            — language engine (built but not active)
@@ -44,7 +46,7 @@ lendnet/
     my-records.html    — lender's records + disputes tabs
     query-borrower.html — query borrower by NIC with risk scoring; supports ?nic=… deep-link from Insights
     submit-record.html — submit a single borrower record
-    update-required.html — lock screen shown when a lender is flagged update_required or past the submission window
+    update-required.html — lock screen shown when a lender is flagged update_required or past the submission window. "No payments received" is an attestation that stamps last_submission_at — gated behind confirmDialog (2026-10-06).
   index.html           — login page
   manifest.json        — PWA manifest
   service-worker.js    — PWA service worker. MUST stay at repo root: a service worker's
@@ -107,6 +109,7 @@ Admin notices displayed to lenders.
 - Detects current page from URL for active highlighting
 - Shows Admin Panel link only when the lender row has `is_admin = true` (fetched once at sidebar init)
 - Sidebar state (open/closed) persists in localStorage
+- **Shell redesign (2026-10-06):** sidebar slides via `transform` (closed = `visibility:hidden`, out of tab order). Mobile (≤768px, live `matchMedia`) gets an injected `.bottom-nav` (Home/Query/Submit/Records/More — More opens the drawer) and `body.has-bottomnav`; hamburger + topbar Sign Out hide on mobile. Escape closes drawer. Hamburger wraps with the logo in `.topbar-start`. Enforcement warning uses `.enforcement-banner` classes. Topbar user span is `#lender-name.topbar-user` (no inline styles).
 - Nav items: Dashboard, Query Borrower, Submit Record, My Records, Bulk Upload, Insights
 - Admin section: Admin Panel, Analytics
 
@@ -126,6 +129,7 @@ Admin notices displayed to lenders.
 - Search by NIC across entire network. Supports `?nic=…` deep-link from Insights → Early Warnings rows.
 - Rule-based risk scoring (0-100 with HIGH/MEDIUM/LOW/UNKNOWN) lives in **`js/risk.js`** as `calculateRisk(records, payments, disputes)`. Single source of truth — imported by both `query-borrower.html` and `insights.html`. Tune weights in one place.
 - Signature: returns `{ level, score, label, sublabel, reasons: [{text, delta}] }`. UI renders each reason as a chip with its `+/-NN` delta badge so lenders see WHY a score is what it is.
+- **UI (redesign 2026-10-06):** risk result uses shared `.risk-card.risk-{level}` + `.risk-head` / `.risk-score` / `.risk-meter` (0–100 track with 35/70 band marks) / `.risk-reasons` `.chip` + `.chip-delta.up|down` in `css/style.css` — reuse on Insights. NIC search is exact-match on the stored string; do not normalise case client-side.
 - **Wave 1 signals (2026-04-26):**
   - **Status mix:** defaulter (+30 each), partial_default (+20), active (+10), +15 bonus for 3+ concurrent active, settled loans (-5 each, positive history).
   - **Loan stacking** *(disbursed_date)*: 2+ disbursements in 30 days = +25, 3+ in 90 days = +15, 4+ in 180 days = +10.
@@ -158,6 +162,7 @@ Admin notices displayed to lenders.
 - Payment logging auto-updates `outstanding` and `last_repayment_date`
 - Mark as Settled logs the remaining outstanding as a final `payments` row (with note "Marked as settled") before setting the record's `outstanding` to 0, `status` to `settled`, and `last_repayment_date` to today. Confirm dialog states the exact amount being logged so the lender is confirming receipt.
 - Disputes tab shows all disputes raised by this lender with status tracking
+- **Redesign 2026-10-06:** all DB values rendered through `esc()` (was unescaped — stored XSS risk, since the Disputes tab shows records owned by *other* lenders). Row actions are delegated `data-action` buttons, not inline `onclick` strings. Save Payment uses `setLoading()` so a double tap can't insert two payments (verified: 3 rapid clicks → 1 insert). Payment modal shows a live remaining-balance preview.
 
 ### 6. Dispute Workflow (complete)
 - Lenders flag records from query results with reason and notes
@@ -186,10 +191,12 @@ Admin notices displayed to lenders.
 - Audit log `details` for bulk payments include `touched_records`, `active_records`, `coverage_pct`, `compliance_met`
 - Uses SheetJS library from CDN for Excel reading
 - Max 500 records per upload
+- **Redesign 2026-10-06:** drop zones are `<label for=file-input>` (keyboard/screen-reader operable; input is `.sr-only`, not `display:none`). Spreadsheet cells + file names go through `esc()` before preview `innerHTML`. Row status is a `.badge` + `.row-msg`. Payments tab shows the 70% coverage rule up front.
 - Batched inserts (50 per batch) to prevent timeout
 
 ### 8. Admin Panel
-- Three tabs: Applications, Disputes, Analytics
+- Four tabs: Applications, Disputes, Lenders (force-update switches + Force All, moved out of Analytics 2026-10-06), Analytics. Sidebar "Analytics" link sets `localStorage['admin-tab']='analytics'` → `switchTab('analytics')`.
+- **Redesign 2026-10-06:** every lender-supplied value (dispute notes, borrower/lender names, districts, phones) rendered via `esc()` — was unescaped, i.e. a lender could inject script into the admin's session. Approve/Reject/Resolve/Force buttons use `setLoading()` (Approve double-click previously inserted duplicate lender rows; verified 3 clicks → 1 insert). Dispute detail uses `ui.openModal`; Resolve stays a static `.form-modal-backdrop` modal (toggle `.active`), Escape closes it, and choosing "remove" turns Save red ("Delete & Resolve") before the confirm dialog.
 - Applications: approve/reject with temp password generation
 - Disputes: full management with record correction
 - Analytics: total lenders, records, queries, disputes, records by status bars, top districts, queries last 7 days chart, recent lenders
@@ -209,7 +216,7 @@ Admin notices displayed to lenders.
   4. **`apply.html`** had the manifest link but no service-worker registration.
 - **Fix:** `service-worker.js` moved to the repo root (root scope, no `Service-Worker-Allowed` header needed — Netlify does not send one), `insights.html` pointed at `/service-worker.js`, and manifest + `theme-color` + `apple-touch-icon` + registration added to `index.html`, registration added to `apply.html`. All 10 HTML pages now register the same root path.
 - **Do not move `service-worker.js` back into `js/`.** Scope is derived from the file's served directory.
-- Cache name is versioned (now `clarix-v7`, bumped 2026-10-06 for the payments RPC change + offline fixes); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
+- Cache name is versioned (now `clarix-v8`, bumped 2026-10-06 for the UI redesign foundation — `css/tokens.css` added to STATIC_ASSETS); bump whenever cached assets change so old clients get new HTML/JS. STATIC_ASSETS covers `index.html`, `manifest.json`, all page HTML (including `insights.html`, `apply.html`, `update-required.html`), all CSS, `js/enforcement.js`, and `js/risk.js`. Fetch handler is network-first with cache fallback; on cache miss it returns a valid 504 Response so the browser doesn't raise "Failed to convert value to 'Response'".
 - `cache.addAll(STATIC_ASSETS)` is **atomic** — one 404 in that list aborts the install and kills the whole worker. Verified 2026-09-02 that all 22 listed paths resolve (23 since `/` was added 2026-10-06). Re-verify after any file rename.
 - Icons check out: exactly 192×192 and 512×512, full-bleed blue background with a centred "C", so `"purpose": "any maskable"` is safe (glyph sits inside the maskable safe zone and won't get cropped on Android).
 - **Verified deployed (2026-09-02):** all 21 STATIC_ASSETS return 200 over HTTPS with correct MIME types, old `/js/service-worker.js` correctly 404s, all 10 pages serve the root registration and a manifest link, manifest is valid JSON with the required install fields, icons are exactly 192×192 / 512×512.
@@ -236,6 +243,7 @@ Admin notices displayed to lenders.
   - **Top borrowers / Top districts:** concentration analysis — flags single-borrower or single-district exposure.
   - **Early warnings:** top 10 riskiest active borrowers by score, each row clickable → deep-links to `query-borrower.html?nic=…` (auto-runs the search on landing).
   - **6-month trend:** disbursements per month over the last 6 months.
+- **Redesign 2026-10-06:** early-warning rows are real `<a href="query-borrower.html?nic=…">` links (were click-only divs). Bar colours come from CSS classes (`.bar-{status|level}`), not JS hex. Trend chart has a visually hidden data table — wrap sr-only tables in a `div.sr-only` (tables ignore `width:1px` and cause horizontal scroll on phones).
 - Insights page is exempt from enforcement gating? **No** — covered by the standard sidebar enforcement check; insights for a locked-out lender don't help.
 
 ### 12. Sinhala Language Toggle (built but deactivated)

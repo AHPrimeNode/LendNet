@@ -2,8 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Clarix — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;600&display=swap" />
+    <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/style.css" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1d4ed8" />
@@ -13,9 +17,10 @@
 
     <div class="page">
 
-      <div class="login-box">
+      <main class="login-box">
 
         <div class="logo">
+          <span class="logo-mark" aria-hidden="true">C</span>
           <span class="logo-name">CLARIX</span>
           <p class="tagline-en">Informal Lending Intelligence Network</p>
           <p class="tagline-si">අවිධිමත් ණය බුද්ධිමත් ජාලය</p>
@@ -23,25 +28,35 @@
 
         <div class="card">
 
-          <p class="card-title">Sign in to your account</p>
+          <h1 class="card-title">Sign in to your account</h1>
           <p class="card-subtitle">ඔබගේ ගිණුමට ප්‍රවේශ වන්න</p>
 
-          <div class="field">
-            <label>Phone Number / දුරකථන අංකය</label>
-            <input type="text" id="phone" placeholder="07X XXX XXXX" />
-          </div>
+          <form id="login-form" novalidate>
 
-          <div class="field">
-            <label>Password / මුරපදය</label>
-            <input type="password" id="password" placeholder="••••••••" />
-          </div>
+            <div class="field">
+              <label for="phone">Phone Number / දුරකථන අංකය</label>
+              <input type="tel" id="phone" inputmode="tel" autocomplete="username" placeholder="07X XXX XXXX" />
+            </div>
 
-          <div id="error-msg" style="color:#dc2626;font-size:12px;margin-bottom:8px;display:none;"></div>
+            <div class="field">
+              <label for="password">Password / මුරපදය</label>
+              <div class="input-group">
+                <input type="password" id="password" autocomplete="current-password" placeholder="••••••••" />
+                <button type="button" class="input-addon" id="toggle-password" aria-label="Show password" aria-pressed="false">
+                  <svg class="icon-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="icon-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                </button>
+              </div>
+            </div>
 
-          <button class="btn-primary" onclick="signIn()">Sign In / ප්‍රවේශ වන්න</button>
+            <div id="error-msg" class="form-error" role="alert" hidden></div>
+
+            <button type="submit" class="btn-primary" id="signin-btn">Sign In / ප්‍රවේශ වන්න</button>
+
+          </form>
 
           <div class="forgot">
-            <a href="#">Forgot password? / මුරපදය අමතකද?</a>
+            <button type="button" class="link-button" id="forgot-btn">Forgot password? / මුරපදය අමතකද?</button>
           </div>
 
           <div class="register-link">
@@ -52,32 +67,54 @@
 
         <p class="footer">Operated by Assert Holdings (Pvt) Ltd | clarix.lk</p>
 
-      </div>
+      </main>
 
     </div>
 
     <script type="module">
       import { supabase } from './js/supabase.js'
+      import { alertDialog, setLoading } from './js/ui.js'
 
-      document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') signIn() })
-      document.getElementById('phone').addEventListener('keydown', e => { if (e.key === 'Enter') signIn() })
+      const $ = id => document.getElementById(id)
+      const errorMsg = $('error-msg')
 
-      window.signIn = async function() {
+      function showError(msg) {
+        errorMsg.textContent = msg
+        errorMsg.hidden = false
+      }
 
-        const phone = document.getElementById('phone').value.trim()
-        const password = document.getElementById('password').value
-        const errorMsg = document.getElementById('error-msg')
+      // Show / hide password
+      $('toggle-password').addEventListener('click', e => {
+        const btn = e.currentTarget
+        const showing = $('password').type === 'text'
+        $('password').type = showing ? 'password' : 'text'
+        btn.setAttribute('aria-pressed', String(!showing))
+        btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password')
+      })
+
+      $('forgot-btn').addEventListener('click', () => {
+        alertDialog({
+          title: 'Reset your password',
+          message: 'Contact the Clarix team from your registered phone number and we will reset your password.\n\nඔබගේ ලියාපදිංචි දුරකථන අංකයෙන් Clarix කණ්ඩායම අමතන්න.'
+        })
+      })
+
+      $('login-form').addEventListener('submit', e => { e.preventDefault(); signIn() })
+
+      async function signIn() {
+
+        const phone = $('phone').value.trim()
+        const password = $('password').value
 
         if (!phone || !password) {
-          errorMsg.textContent = 'Please enter your phone number and password.'
-          errorMsg.style.display = 'block'
+          showError('Please enter your phone number and password.')
+          ;(!phone ? $('phone') : $('password')).focus()
           return
         }
 
-        const button = document.querySelector('.btn-primary')
-        button.textContent = 'Signing in...'
-        button.disabled = true
-        errorMsg.style.display = 'none'
+        const button = $('signin-btn')
+        setLoading(button, true, 'Signing in…')
+        errorMsg.hidden = true
 
         const email = phone.replace(/\s/g, '') + '@clarix.lk'
 
@@ -87,10 +124,8 @@
         })
 
         if (error) {
-          errorMsg.textContent = 'Incorrect phone number or password. / වැරදි දුරකථන අංකයක් හෝ මුරපදයකි.'
-          errorMsg.style.display = 'block'
-          button.textContent = 'Sign In / ප්‍රවේශ වන්න'
-          button.disabled = false
+          showError('Incorrect phone number or password. / වැරදි දුරකථන අංකයක් හෝ මුරපදයකි.')
+          setLoading(button, false)
         } else {
           window.location.href = 'pages/dashboard.html'
         }

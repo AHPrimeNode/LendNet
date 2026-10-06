@@ -2,103 +2,165 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Clarix — Dashboard</title>
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1d4ed8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;600&display=swap" />
+    <link rel="stylesheet" href="../css/tokens.css" />
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
-    <style>
-      body { background-color: #f8fafc; min-height: 100vh; }
-      .page { display: none; }
-    </style>
   </head>
   <body style="visibility:hidden;">
 
-    <div id="app" style="display:none;">
+    <div id="app" hidden>
 
       <div class="topbar">
-        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <span class="logo-name">CLARIX</span>
         <div class="topbar-right">
-          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
-          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+          <span id="lender-name" class="topbar-user"></span>
+          <button type="button" class="btn-signout" onclick="signOut()">Sign Out</button>
         </div>
       </div>
 
-      <div class="dashboard-content">
+      <main class="dashboard-content">
 
-        <h1 class="dash-title">Dashboard</h1>
-        <p class="dash-subtitle">Welcome to Clarix — Informal Lending Intelligence Network</p>
+        <div class="page-header">
+          <div>
+            <p class="page-eyebrow" id="today-label"></p>
+            <h1 class="dash-title" id="greeting">Dashboard</h1>
+            <p class="dash-subtitle">Your portfolio at a glance on the Clarix network</p>
+          </div>
+          <a href="query-borrower.html" class="btn btn-brand">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            Query a Borrower
+          </a>
+        </div>
 
-        <div class="dash-cards">
-          <div class="dash-card">
+        <section class="dash-cards" aria-label="Portfolio statistics">
+          <div class="dash-card stat">
+            <span class="stat-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg></span>
             <p class="dash-card-label">Total Records</p>
-            <p class="dash-card-value" id="stat-total">—</p>
+            <p class="dash-card-value" id="stat-total"><span class="skeleton stat-skeleton"></span></p>
           </div>
-          <div class="dash-card">
+          <div class="dash-card stat">
+            <span class="stat-icon stat-icon-info" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
             <p class="dash-card-label">Active Loans</p>
-            <p class="dash-card-value" id="stat-active">—</p>
+            <p class="dash-card-value" id="stat-active"><span class="skeleton stat-skeleton"></span></p>
           </div>
-          <div class="dash-card">
+          <div class="dash-card stat" id="card-defaulters">
+            <span class="stat-icon stat-icon-danger" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
             <p class="dash-card-label">Defaulters</p>
-            <p class="dash-card-value" id="stat-defaulters">—</p>
+            <p class="dash-card-value" id="stat-defaulters"><span class="skeleton stat-skeleton"></span></p>
           </div>
-          <div class="dash-card">
+          <div class="dash-card stat">
+            <span class="stat-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
             <p class="dash-card-label">Queries This Month</p>
-            <p class="dash-card-value" id="stat-queries">—</p>
+            <p class="dash-card-value" id="stat-queries"><span class="skeleton stat-skeleton"></span></p>
           </div>
-        </div>
+        </section>
 
-        <div class="dash-actions">
-  <button class="btn-primary" onclick="window.location.href='query-borrower.html'">Query a Borrower</button>
-  <button class="btn-secondary" onclick="window.location.href='submit-record.html'">Submit a Record</button>
-  <button class="btn-secondary" onclick="window.location.href='my-records.html'">My Records</button>
-</div>
+        <h2 class="section-label">Quick actions</h2>
+        <nav class="action-grid" aria-label="Quick actions">
+          <a href="query-borrower.html" class="action-card action-card-primary">
+            <span class="action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+            <span class="action-text">
+              <span class="action-title">Query a Borrower</span>
+              <span class="action-desc">Check risk by NIC before you lend</span>
+            </span>
+          </a>
+          <a href="submit-record.html" class="action-card">
+            <span class="action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+            <span class="action-text">
+              <span class="action-title">Submit a Record</span>
+              <span class="action-desc">Add a new loan to the network</span>
+            </span>
+          </a>
+          <a href="my-records.html" class="action-card">
+            <span class="action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></svg></span>
+            <span class="action-text">
+              <span class="action-title">My Records</span>
+              <span class="action-desc">Log payments and settle loans</span>
+            </span>
+          </a>
+          <a href="bulk-upload.html" class="action-card">
+            <span class="action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+            <span class="action-text">
+              <span class="action-title">Bulk Upload</span>
+              <span class="action-desc">Upload records or payments from Excel</span>
+            </span>
+          </a>
+        </nav>
 
-      </div>
+      </main>
 
     </div>
 
     <script type="module">
       import { supabase } from '../js/supabase.js'
+      import { toast } from '../js/ui.js'
+
+      const $ = id => document.getElementById(id)
+      const setStat = (id, value) => { $(id).textContent = value }
+
+      // Arrived from Submit Record → confirm, then drop the flag so a refresh doesn't repeat it
+      if (new URLSearchParams(location.search).get('success') === 'record') {
+        toast('Record submitted to the network.', 'success')
+        history.replaceState(null, '', location.pathname)
+      }
+
+      $('today-label').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
         window.location.href = '../index.html'
       } else {
-        document.getElementById('app').style.display = 'block'
+        $('app').hidden = false
         const phone = session.user.email.replace('@clarix.lk', '')
-        document.getElementById('lender-name').textContent = phone
+        $('lender-name').textContent = phone
 
         const { data: lenderData } = await supabase
           .from('lenders')
-          .select('id')
+          .select('id, full_name, business_name')
           .eq('phone', phone)
           .single()
 
         if (lenderData) {
-          const { data: records } = await supabase
+          const hour = new Date().getHours()
+          const part = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+          const name = lenderData.business_name || lenderData.full_name
+          $('greeting').textContent = name ? `${part}, ${name}` : part
+
+          const { data: records, error: recordsError } = await supabase
             .from('records')
             .select('*')
             .eq('lender_id', lenderData.id)
 
           if (records) {
-            document.getElementById('stat-total').textContent = records.length
-            document.getElementById('stat-active').textContent = records.filter(r => r.status === 'active').length
-            document.getElementById('stat-defaulters').textContent = records.filter(r => r.status === 'defaulter').length
+            const defaulters = records.filter(r => r.status === 'defaulter').length
+            setStat('stat-total', records.length.toLocaleString())
+            setStat('stat-active', records.filter(r => r.status === 'active').length.toLocaleString())
+            setStat('stat-defaulters', defaulters.toLocaleString())
+            $('card-defaulters').classList.toggle('stat-alert', defaulters > 0)
+          } else if (recordsError) {
+            ;['stat-total', 'stat-active', 'stat-defaulters'].forEach(id => setStat(id, '—'))
           }
 
           // Queries this lender ran this calendar month
           const now = new Date()
           const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-          const { count: queryCount } = await supabase
+          const { count: queryCount, error: queryError } = await supabase
             .from('queries')
             .select('id', { count: 'exact', head: true })
             .eq('lender_id', lenderData.id)
             .gte('created_at', firstOfMonth)
 
-          document.getElementById('stat-queries').textContent = queryCount ?? 0
+          setStat('stat-queries', queryError ? '—' : (queryCount ?? 0).toLocaleString())
+        } else {
+          ;['stat-total', 'stat-active', 'stat-defaulters', 'stat-queries'].forEach(id => setStat(id, '—'))
         }
       }
 

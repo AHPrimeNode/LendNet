@@ -52,7 +52,7 @@
       'position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;' +
       'background:#1d4ed8;color:#fff;border-radius:12px;padding:12px 14px;' +
       'box-shadow:0 8px 24px rgba(15,23,42,.28);display:flex;align-items:center;' +
-      'gap:12px;font-size:14px;max-width:420px;margin:0 auto;'
+      'gap:12px;font-size:14px;max-width:420px;margin:0 auto;font-family:inherit;'
 
     bar.innerHTML = `
       <img src="/icons/icon-192.png" alt="" width="36" height="36" style="border-radius:8px;flex-shrink:0;" />
@@ -60,8 +60,8 @@
         <div style="font-weight:bold;">Install Clarix</div>
         <div style="font-size:12px;opacity:.85;">Add to your home screen for faster access.</div>
       </div>
-      <button id="clarix-install-yes" style="background:#fff;color:#1d4ed8;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;white-space:nowrap;">Install</button>
-      <button id="clarix-install-no" aria-label="Dismiss" style="background:transparent;color:#fff;border:none;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.8;">&times;</button>
+      <button id="clarix-install-yes" style="background:#fff;color:#1d4ed8;border:none;border-radius:8px;min-height:40px;padding:0 16px;font-size:13px;font-weight:bold;cursor:pointer;white-space:nowrap;">Install</button>
+      <button id="clarix-install-no" aria-label="Dismiss" style="background:transparent;color:#fff;border:none;font-size:22px;line-height:1;cursor:pointer;width:44px;height:44px;margin:-6px -8px -6px -4px;opacity:.85;flex-shrink:0;">&times;</button>
     `
 
     document.body.appendChild(bar)

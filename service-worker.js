@@ -2,12 +2,13 @@
 // ── Clarix Service Worker               ──
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'clarix-v7'
+const CACHE_NAME = 'clarix-v8'
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/css/tokens.css',
   '/css/style.css',
   '/css/sidebar.css',
   '/js/supabase.js',
@@ -15,6 +16,7 @@ const STATIC_ASSETS = [
   '/js/enforcement.js',
   '/js/risk.js',
   '/js/install.js',
+  '/js/ui.js',
   '/js/lang.js',
   '/js/translations.js',
   '/pages/dashboard.html',

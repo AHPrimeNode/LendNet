@@ -2,233 +2,132 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Clarix — Query Borrower</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;600&display=swap" />
+    <link rel="stylesheet" href="../css/tokens.css" />
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1d4ed8" />
     <style>
-      body { background-color: #f8fafc; min-height: 100vh; }
-      .page { display: none; }
+      /* Page-specific layout only — risk components live in css/style.css */
+      .search-form { display: flex; gap: var(--space-3); align-items: flex-start; }
+      .search-form .field { flex: 1; margin-bottom: 0; }
+      .search-form .field input { font-family: var(--font-mono); letter-spacing: 0.02em; }
+      .search-form .field input::placeholder { font-family: var(--font-sans); letter-spacing: 0; }
+      /* Line the button up with the input: offset by the label's height (text-sm × 1.5 line-height + label margin) */
+      .search-form .btn { flex-shrink: 0; margin-top: calc(var(--text-sm) * 1.5 + var(--space-2)); }
+      @media (max-width: 560px) { .search-form { flex-direction: column; align-items: stretch; } .search-form .btn { margin-top: 0; } }
 
-      .search-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; }
-      .search-row { display: flex; gap: 8px; margin-top: 1rem; }
-      .search-row input { flex: 1; padding: 11px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #1e293b; outline: none; }
-      .search-row input:focus { border-color: #3b82f6; }
-      .search-row button { padding: 11px 24px; background: #1d4ed8; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
-      .search-row button:hover { background: #1e40af; }
+      .pdpa-notice { display: flex; align-items: center; justify-content: center; gap: var(--space-2); text-align: center; font-size: var(--text-xs); color: var(--text-subtle); margin-top: var(--space-4); }
 
-      .result-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 1.5rem; }
+      .profile { display: flex; gap: var(--space-5); align-items: center; }
+      .profile-avatar { width: 56px; height: 56px; border-radius: var(--radius-full); background: var(--surface-muted); color: var(--gray-400); display: grid; place-items: center; flex-shrink: 0; }
+      .profile-name { font-size: var(--text-lg); font-weight: var(--weight-semi); line-height: var(--leading-tight); margin-bottom: var(--space-3); overflow-wrap: anywhere; }
+      .profile-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); }
+      .profile-meta dt { font-size: var(--text-xs); color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+      .profile-meta dd { font-size: var(--text-sm); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+      @media (max-width: 768px) { .profile-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 480px) { .profile { align-items: flex-start; } .profile-avatar { width: 44px; height: 44px; } }
 
-      .risk-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 16px; }
-      .risk-header.high { background: #fef2f2; border-bottom: 1px solid #fecaca; }
-      .risk-header.medium { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
-      .risk-header.low { background: #f0fdf4; border-bottom: 1px solid #bbf7d0; }
+      .summary-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+      .summary-stat { background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); min-width: 0; }
+      .summary-stat-label { font-size: var(--text-xs); color: var(--text-subtle); margin-bottom: var(--space-1); }
+      .summary-stat-value { font-size: var(--text-lg); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+      .summary-stat-value.danger { color: var(--danger-600); }
+      .summary-stat-value.success { color: var(--success-600); }
+      @media (max-width: 480px) { .summary-stats { grid-template-columns: 1fr; } }
 
-      .risk-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold; flex-shrink: 0; }
-      .risk-icon.high { background: #dc2626; }
-      .risk-icon.medium { background: #ea580c; }
-      .risk-icon.low { background: #16a34a; }
+      .amount-due { color: var(--danger-600); }
+      .amount-clear { color: var(--success-600); }
 
-      .risk-label { font-size: 16px; font-weight: bold; }
-      .risk-label.high { color: #991b1b; }
-      .risk-label.medium { color: #9a3412; }
-      .risk-label.low { color: #166534; }
+      .btn-flag { color: var(--danger-600); border-color: var(--danger-200); background: var(--danger-50); }
+      .btn-flag:hover:not(:disabled) { background: #fee2e2; color: var(--danger-700); }
 
-      .risk-sublabel { font-size: 12px; margin-top: 2px; }
-      .risk-sublabel.high { color: #b91c1c; }
-      .risk-sublabel.medium { color: #c2410c; }
-      .risk-sublabel.low { color: #15803d; }
-
-      .risk-nic { display: none; }
-
-      .summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; }
-      .summary-stat { background: #f8fafc; border-radius: 8px; padding: 0.75rem 1rem; }
-      .summary-stat-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
-      .summary-stat-value { font-size: 20px; font-weight: bold; color: #1e293b; }
-      .summary-stat-value.danger { color: #dc2626; }
-      .summary-stat-value.success { color: #16a34a; }
-
-      .records-section { padding: 1.25rem 1.5rem; }
-      .records-section-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; }
-
-      .records-table { width: 100%; border-collapse: collapse; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden; font-size: 13px; }
-      .records-table th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; color: #64748b; font-weight: normal; border-bottom: 1px solid #e2e8f0; }
-      .records-table td { padding: 10px 12px; border-bottom: 1px solid #f8fafc; color: #1e293b; }
-      .records-table tr:last-child td { border-bottom: none; }
-
-      .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-      .badge-active { background: #dbeafe; color: #1d4ed8; }
-      .badge-defaulter { background: #fee2e2; color: #991b1b; }
-      .badge-partial_default { background: #fef3c7; color: #92400e; }
-      .badge-settled { background: #dcfce7; color: #166534; }
-      .badge-restructured { background: #f3e8ff; color: #6b21a8; }
-
-      .no-result { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 3rem; text-align: center; }
-      .no-result-icon { font-size: 40px; margin-bottom: 1rem; }
-      .no-result-title { font-size: 15px; font-weight: bold; color: #1e293b; margin-bottom: 4px; }
-      .no-result-sub { font-size: 13px; color: #64748b; }
-
-      .pdpa-notice { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 1rem; }
-
-      .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; cursor: pointer; }
-      .back-link:hover { color: #1d4ed8; }
-
-      /* ── Flag button in table ── */
-      .btn-flag { padding: 4px 10px; font-size: 11px; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; }
-      .btn-flag:hover { background: #fee2e2; }
-
-      /* ── Dispute Modal ── */
-      .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-      .modal-overlay.active { display: flex; }
-
-      .modal-box { background: white; border-radius: 12px; width: 480px; max-width: 90vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-
-      .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
-      .modal-header h2 { font-size: 16px; color: #1e293b; margin: 0; }
-      .modal-close { background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
-      .modal-close:hover { background: #f1f5f9; color: #64748b; }
-
-      .modal-body { padding: 1.5rem; }
-
-      .modal-record-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 12px; color: #475569; line-height: 1.8; }
-      .modal-record-info strong { color: #1e293b; }
-
-      .modal-label { font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 6px; display: block; }
-
-      .modal-select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; background: white; outline: none; margin-bottom: 1rem; }
-      .modal-select:focus { border-color: #3b82f6; }
-
-      .modal-textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; outline: none; resize: vertical; min-height: 80px; margin-bottom: 1rem; font-family: inherit; box-sizing: border-box; }
-      .modal-textarea:focus { border-color: #3b82f6; }
-
-      .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px; }
-
-      .btn-modal-cancel { padding: 9px 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; color: #64748b; font-size: 13px; cursor: pointer; font-weight: bold; }
-      .btn-modal-cancel:hover { background: #f8fafc; }
-
-      .btn-modal-submit { padding: 9px 20px; border: none; border-radius: 8px; background: #dc2626; color: white; font-size: 13px; cursor: pointer; font-weight: bold; }
-      .btn-modal-submit:hover { background: #b91c1c; }
-      .btn-modal-submit:disabled { background: #94a3b8; cursor: not-allowed; }
-
-      .modal-msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 1rem; }
-      .modal-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-      .modal-msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-
-      .risk-signals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-      .risk-signal { font-size: 11px; font-weight: bold; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-      .risk-signal-high { background: rgba(220,38,38,0.12); color: #991b1b; }
-      .risk-signal-medium { background: rgba(234,88,12,0.12); color: #9a3412; }
-      .risk-signal-low { background: rgba(22,163,74,0.12); color: #166534; }
-
-      /* ── Reason chips with delta badges ── */
-      .risk-reason { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; padding: 3px 9px 3px 4px; border-radius: 20px; }
-      .reason-delta { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: rgba(255,255,255,0.7); font-weight: bold; min-width: 28px; text-align: center; }
-      .risk-reason-high { background: rgba(220,38,38,0.12); color: #991b1b; }
-      .risk-reason-medium { background: rgba(234,88,12,0.12); color: #9a3412; }
-      .risk-reason-low { background: rgba(22,163,74,0.12); color: #166534; }
-
-      /* ── Unknown (first-time borrower) variant ── */
-      .risk-header.unknown { background: #fef3c7; border-bottom: 1px solid #fde68a; }
-      .risk-icon.unknown { background: #d97706; }
-      .risk-label.unknown { color: #92400e; font-size: 16px; font-weight: bold; }
-      .risk-sublabel.unknown { color: #b45309; font-size: 12px; margin-top: 2px; }
-
-      .no-result.no-result-unknown { background: #fffbeb; border: 1px solid #fde68a; text-align: left; padding: 2rem; }
-      .no-result-unknown .no-result-icon-badge { display: inline-flex; width: 56px; height: 56px; border-radius: 50%; background: #d97706; color: white; font-size: 26px; font-weight: bold; align-items: center; justify-content: center; margin-bottom: 1rem; }
-      .no-result-unknown .no-result-title { color: #92400e; font-size: 17px; font-weight: bold; margin-bottom: 4px; }
-      .no-result-unknown .no-result-sub { color: #78350f; font-size: 13px; }
-      .no-result-actions { list-style: none; padding: 0; margin: 12px 0 0 0; display: flex; flex-direction: column; gap: 6px; }
-      .no-result-actions li { color: #92400e; font-size: 13px; padding-left: 20px; position: relative; }
-      .no-result-actions li::before { content: '→'; position: absolute; left: 0; color: #d97706; font-weight: bold; }
-
-      /* ── Profile Card ── */
-      .profile-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 3fr; overflow: hidden; }
-      .profile-avatar-side { background: #f1f5f9; display: flex; align-items: center; justify-content: center; padding: 1.5rem; border-right: 1px solid #e2e8f0; }
-      .profile-avatar-icon { color: #94a3b8; }
-      .profile-details { padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; }
-      .profile-name { font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 16px; }
-      .profile-meta-grid { display: flex; flex-direction: column; gap: 10px; }
-      .profile-meta-item { display: flex; flex-direction: column; gap: 2px; }
-      .profile-meta-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
-      .profile-meta-value { font-size: 13px; color: #1e293b; font-weight: 500; }
-
-      /* ── Risk Score Badge ── */
-      .risk-score-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; }
-      .risk-score-badge.risk-score-high { background: rgba(220,38,38,0.15); }
-      .risk-score-badge.risk-score-medium { background: rgba(234,88,12,0.15); }
-      .risk-score-badge.risk-score-low { background: rgba(22,163,74,0.15); }
-      .risk-score-number { font-size: 26px; font-weight: bold; line-height: 1; }
-      .risk-score-high .risk-score-number { color: #991b1b; }
-      .risk-score-medium .risk-score-number { color: #9a3412; }
-      .risk-score-low .risk-score-number { color: #166534; }
-      .risk-score-denom { font-size: 10px; color: #94a3b8; font-weight: bold; }
+      /* Dispute modal (form modal — reuses .ui-modal look) */
     </style>
   </head>
   <body style="visibility:hidden;">
 
-    <div id="page-content" style="display:none;">
+    <div id="page-content" hidden>
 
       <div class="topbar">
-        <span class="logo-name" style="font-size:18px;">CLARIX</span>
+        <span class="logo-name">CLARIX</span>
         <div class="topbar-right">
-          <span id="lender-name" style="font-size:13px;color:#94a3b8;margin-right:16px;"></span>
-          <button class="btn-signout" onclick="signOut()">Sign Out</button>
+          <span id="lender-name" class="topbar-user"></span>
+          <button type="button" class="btn-signout" onclick="signOut()">Sign Out</button>
         </div>
       </div>
 
-      <div class="dashboard-content">
-
-        <a class="back-link" href="dashboard.html">← Back to Dashboard</a>
+      <main class="dashboard-content">
 
         <h1 class="dash-title">Query a Borrower</h1>
-        <p class="dash-subtitle">Search the Clarix network by NIC number /ජාතික හැඳුනුම්පත් අංකයෙන් සොයන්න</p>
+        <p class="dash-subtitle">Search the Clarix network by NIC number / ජාතික හැඳුනුම්පත් අංකයෙන් සොයන්න</p>
 
-        <div class="search-card">
-          <p style="font-size:13px;color:#475569;margin-bottom:4px;">Enter Borrower NIC / ජාතික හැඳුනුම්පත් අංකය</p>
-          <p style="font-size:11px;color:#94a3b8;">Search by NIC to see all records across the entire Clarix network</p>
-          <div class="search-row">
-            <input type="text" id="nic-input" placeholder="e.g. 199012345678 or 901234567V" />
-            <button onclick="queryBorrower()">Search / සොයන්න</button>
-          </div>
-        </div>
+        <section class="panel" aria-label="Search">
+          <form class="search-form" id="search-form" novalidate role="search">
+            <div class="field">
+              <label for="nic-input">Borrower NIC / ජාතික හැඳුනුම්පත් අංකය</label>
+              <input type="text" id="nic-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 199012345678 or 901234567V" />
+              <p class="field-hint">Shows every record for this NIC across the whole Clarix network.</p>
+            </div>
+            <button type="submit" class="btn btn-brand search-submit" id="search-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              Search / සොයන්න
+            </button>
+          </form>
+        </section>
 
-        <div id="result-area"></div>
+        <div id="result-area" aria-live="polite"></div>
 
-        <p class="pdpa-notice">Every query is permanently logged in compliance with the Personal Data Protection Act (2022)</p>
+        <p class="pdpa-notice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Every query is permanently logged in compliance with the Personal Data Protection Act (2022)
+        </p>
 
-      </div>
+      </main>
 
     </div>
 
     <!-- ── Dispute Modal ── -->
-    <div class="modal-overlay" id="dispute-modal">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h2>⚑ Flag This Record</h2>
-          <button class="modal-close" onclick="closeDisputeModal()">✕</button>
+    <div class="ui-modal-backdrop form-modal-backdrop" id="dispute-modal">
+      <div class="ui-modal form-modal" role="dialog" aria-modal="true" aria-labelledby="dispute-title">
+        <div class="form-modal-header">
+          <h2 class="ui-modal-title" id="dispute-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+            Flag this record
+          </h2>
+          <button type="button" class="btn btn-ghost btn-icon" onclick="closeDisputeModal()" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
         </div>
-        <div class="modal-body">
+        <div class="form-modal-body">
           <div id="dispute-msg"></div>
-          <div id="dispute-record-info" class="modal-record-info"></div>
+          <dl id="dispute-record-info" class="record-summary"></dl>
           <div id="dispute-form-fields">
-            <label class="modal-label">Reason for flagging</label>
-            <select class="modal-select" id="dispute-reason">
-              <option value="">— Select a reason —</option>
-              <option value="wrong_nic">Wrong NIC — this record is linked to the wrong person</option>
-              <option value="wrong_amount">Wrong Amount — the loan or outstanding amount is incorrect</option>
-              <option value="already_settled">Already Settled — this loan has been fully repaid</option>
-              <option value="false_submission">False Submission — this record is fabricated or malicious</option>
-              <option value="identity_mismatch">Identity Mismatch — borrower name does not match NIC</option>
-            </select>
-            <label class="modal-label">Supporting details (optional)</label>
-            <textarea class="modal-textarea" id="dispute-notes" placeholder="Add any details that will help the admin review this dispute..."></textarea>
+            <div class="field">
+              <label for="dispute-reason" class="required">Reason for flagging</label>
+              <select id="dispute-reason">
+                <option value="">— Select a reason —</option>
+                <option value="wrong_nic">Wrong NIC — this record is linked to the wrong person</option>
+                <option value="wrong_amount">Wrong Amount — the loan or outstanding amount is incorrect</option>
+                <option value="already_settled">Already Settled — this loan has been fully repaid</option>
+                <option value="false_submission">False Submission — this record is fabricated or malicious</option>
+                <option value="identity_mismatch">Identity Mismatch — borrower name does not match NIC</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dispute-notes">Supporting details <span class="label-optional">(optional)</span></label>
+              <textarea id="dispute-notes" placeholder="Add any details that will help the admin review this dispute..."></textarea>
+            </div>
           </div>
         </div>
-        <div class="modal-footer" id="dispute-footer">
-          <button class="btn-modal-cancel" onclick="closeDisputeModal()">Cancel</button>
-          <button class="btn-modal-submit" id="dispute-submit-btn" onclick="submitDispute()">Submit Dispute</button>
+        <div class="form-modal-footer ui-modal-actions" id="dispute-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeDisputeModal()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="dispute-submit-btn" onclick="submitDispute()">Submit Dispute</button>
         </div>
       </div>
     </div>
@@ -236,21 +135,35 @@
     <script type="module">
       import { supabase } from '../js/supabase.js'
       import { calculateRisk } from '../js/risk.js'
+      import { fieldError, setLoading } from '../js/ui.js'
 
       let currentLenderId = null
       let selectedRecordId = null
       let currentRecords = []
+      let modalReturnFocus = null
 
       function esc(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))
       }
+
+      const lkr = n => 'LKR ' + (parseFloat(n) || 0).toLocaleString()
+      const STATUS_LABELS = { active: 'Active', defaulter: 'Defaulter', partial_default: 'Partial default', settled: 'Settled', restructured: 'Restructured' }
+      const statusBadge = s => `<span class="badge badge-${esc(s)}">${esc(STATUS_LABELS[s] || s)}</span>`
+
+      const RISK_ICONS = {
+        high: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>',
+        medium: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+        low: '<path d="M20 6 9 17l-5-5"/>',
+        unknown: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'
+      }
+      const riskIcon = level => `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RISK_ICONS[level]}</svg>`
 
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
         window.location.href = '../index.html'
       } else {
-        document.getElementById('page-content').style.display = 'block'
+        document.getElementById('page-content').hidden = false
         const phone = session.user.email.replace('@clarix.lk', '')
         document.getElementById('lender-name').textContent = phone
 
@@ -265,20 +178,41 @@
 
       document.getElementById('result-area').addEventListener('click', e => {
         const btn = e.target.closest('.btn-flag')
-        if (btn && btn.dataset.recordId) window.openDisputeModal(btn.dataset.recordId)
+        if (btn && btn.dataset.recordId) window.openDisputeModal(btn.dataset.recordId, btn)
       })
 
+      document.getElementById('search-form').addEventListener('submit', e => { e.preventDefault(); queryBorrower() })
+
       window.queryBorrower = async function() {
-        const nic = document.getElementById('nic-input').value.trim()
+        const input = document.getElementById('nic-input')
+        const nic = input.value.trim()
         const resultArea = document.getElementById('result-area')
+        const btn = document.getElementById('search-btn')
 
         if (!nic) {
-          resultArea.innerHTML = '<p style="color:#dc2626;font-size:13px;">Please enter a NIC number.</p>'
+          fieldError(input, 'Enter a NIC number to search.')
+          input.focus()
+          input.addEventListener('input', () => fieldError(input, null), { once: true })
           return
         }
+        fieldError(input, null)
 
-        resultArea.innerHTML = '<p style="font-size:13px;color:#64748b;">Searching network...</p>'
+        setLoading(btn, true, 'Searching…')
+        resultArea.innerHTML = `
+          <div class="panel" aria-busy="true">
+            <span class="skeleton" style="height:20px;width:40%;margin-bottom:12px;"></span>
+            <span class="skeleton" style="height:14px;width:70%;margin-bottom:8px;"></span>
+            <span class="skeleton" style="height:14px;width:55%;"></span>
+          </div>`
 
+        try {
+          await runQuery(nic, resultArea)
+        } finally {
+          setLoading(btn, false)
+        }
+      }
+
+      async function runQuery(nic, resultArea) {
         const { data: records, error } = await supabase
           .from('records')
           .select('*')
@@ -286,7 +220,7 @@
           .order('created_at', { ascending: false })
 
         if (error) {
-          resultArea.innerHTML = '<p style="color:#dc2626;font-size:13px;">Error searching. Please try again.</p>'
+          resultArea.innerHTML = '<div class="alert alert-danger" role="alert">Error searching the network. Please try again.</div>'
           return
         }
 
@@ -301,18 +235,24 @@
         if (!records || records.length === 0) {
           // First-time borrower = UNKNOWN, not LOW. "No data" is not the same as "safe".
           resultArea.innerHTML = `
-            <div class="no-result no-result-unknown">
-              <div class="no-result-icon-badge">?</div>
-              <p class="no-result-title">UNKNOWN — First-Time Borrower</p>
-              <p class="no-result-sub">NIC <strong>${esc(nic)}</strong> has no records on the Clarix network.</p>
-              <p class="no-result-sub" style="margin-top:10px;font-weight:bold;">This is not a green light — treat as unknown risk.</p>
-              <ul class="no-result-actions">
-                <li>Verify identity with a physical NIC check</li>
-                <li>Ask for at least two references</li>
-                <li>Consider a smaller starter loan to build history</li>
-                <li>Re-query in 1–2 weeks to see if they appear elsewhere on the network</li>
-              </ul>
-            </div>
+            <section class="risk-card risk-unknown">
+              <div class="risk-head">
+                <span class="risk-icon">${riskIcon('unknown')}</span>
+                <div class="risk-head-text">
+                  <p class="risk-label">UNKNOWN — First-Time Borrower</p>
+                  <p class="risk-sublabel">NIC <strong class="mono">${esc(nic)}</strong> has no records on the Clarix network.</p>
+                </div>
+              </div>
+              <div class="risk-body">
+                <p class="risk-callout">This is not a green light — treat as unknown risk.</p>
+                <ul class="next-steps">
+                  <li>Verify identity with a physical NIC check</li>
+                  <li>Ask for at least two references</li>
+                  <li>Consider a smaller starter loan to build history</li>
+                  <li>Re-query in 1–2 weeks to see if they appear elsewhere on the network</li>
+                </ul>
+              </div>
+            </section>
           `
           return
         }
@@ -336,105 +276,97 @@
         const borrower = records[0]
         const firstSeen = new Date(records[records.length - 1].created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
-        const riskIcons = { high: '!', medium: '~', low: '✓', unknown: '?' }
+        // Positive delta raises risk (red), negative lowers it (green)
+        const reasonsHTML = risk.reasons.length > 0
+          ? `<div class="risk-reasons">${risk.reasons.map(r => `
+              <span class="chip">
+                <span class="chip-delta ${r.delta > 0 ? 'up' : 'down'}">${r.delta > 0 ? '+' : ''}${r.delta}</span>${esc(r.text)}
+              </span>`).join('')}</div>`
+          : ''
 
         resultArea.innerHTML = `
 
-          <!-- ── Borrower Profile Card ── -->
-          <div class="profile-card">
-            <div class="profile-avatar-side">
-              <svg class="profile-avatar-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="7" r="4"/>
-                <path d="M12 13c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/>
-              </svg>
+          <!-- ── Borrower Profile ── -->
+          <section class="panel profile" aria-label="Borrower profile">
+            <span class="profile-avatar" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <div style="min-width:0;flex:1;">
+              <h2 class="profile-name">${esc(borrower.borrower_name)}</h2>
+              <dl class="profile-meta">
+                <div><dt>NIC</dt><dd class="mono">${esc(nic)}</dd></div>
+                <div><dt>Phone</dt><dd class="mono">${esc(borrower.borrower_phone || '—')}</dd></div>
+                <div><dt>District</dt><dd>${esc(borrower.borrower_district || '—')}</dd></div>
+                <div><dt>On network since</dt><dd>${firstSeen}</dd></div>
+              </dl>
             </div>
-            <div class="profile-details">
-              <p class="profile-name">${esc(borrower.borrower_name)}</p>
-              <div class="profile-meta-grid">
-                <div class="profile-meta-item">
-                  <span class="profile-meta-label">NIC</span>
-                  <span class="profile-meta-value">${esc(nic)}</span>
-                </div>
-                <div class="profile-meta-item">
-                  <span class="profile-meta-label">Phone</span>
-                  <span class="profile-meta-value">${esc(borrower.borrower_phone || '—')}</span>
-                </div>
-                <div class="profile-meta-item">
-                  <span class="profile-meta-label">District</span>
-                  <span class="profile-meta-value">${esc(borrower.borrower_district || '—')}</span>
-                </div>
-                <div class="profile-meta-item">
-                  <span class="profile-meta-label">On Network Since</span>
-                  <span class="profile-meta-value">${firstSeen}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </section>
 
-          <!-- ── Risk Assessment Card ── -->
-          <div class="result-card">
-
-            <div class="risk-header ${risk.level}">
-              <div class="risk-icon ${risk.level}">${riskIcons[risk.level]}</div>
-              <div style="flex:1;">
-                <p class="risk-label ${risk.level}">${risk.label}</p>
-                <p class="risk-sublabel ${risk.level}">${risk.sublabel}</p>
-                ${risk.reasons.length > 0 ? `<div class="risk-signals">${risk.reasons.map(r => `<span class="risk-reason risk-reason-${risk.level}"><span class="reason-delta">${r.delta > 0 ? '+' : ''}${r.delta}</span>${esc(r.text)}</span>`).join('')}</div>` : ''}
+          <!-- ── Risk Assessment ── -->
+          <section class="risk-card risk-${risk.level}" aria-label="Risk assessment">
+            <div class="risk-head">
+              <span class="risk-icon">${riskIcon(risk.level)}</span>
+              <div class="risk-head-text">
+                <p class="risk-label">${risk.label}</p>
+                <p class="risk-sublabel">${risk.sublabel}</p>
               </div>
-              <div class="risk-score-badge risk-score-${risk.level}">
+              <div class="risk-score" aria-label="Risk score ${risk.score} out of 100">
                 <span class="risk-score-number">${risk.score}</span>
                 <span class="risk-score-denom">/100</span>
               </div>
             </div>
-
-            <div class="summary-stats">
-              <div class="summary-stat">
-                <p class="summary-stat-label">Active Loans</p>
-                <p class="summary-stat-value ${activeRecords.length > 1 ? 'danger' : ''}">${activeRecords.length}</p>
+            <div class="risk-body">
+              <div class="risk-meter" aria-hidden="true">
+                <div class="risk-meter-track"><span class="risk-meter-fill" style="width:${Math.max(2, risk.score)}%"></span></div>
+                <div class="risk-meter-scale"><span>Low</span><span style="left:35%">35 · Medium</span><span style="left:70%">70 · High</span></div>
               </div>
-              <div class="summary-stat">
-                <p class="summary-stat-label">Total Outstanding</p>
-                <p class="summary-stat-value ${totalOutstanding > 0 ? 'danger' : ''}">LKR ${totalOutstanding.toLocaleString()}</p>
-              </div>
-              <div class="summary-stat">
-                <p class="summary-stat-label">Settled Loans</p>
-                <p class="summary-stat-value success">${settledRecords.length}</p>
+              ${reasonsHTML}
+              <div class="summary-stats">
+                <div class="summary-stat">
+                  <p class="summary-stat-label">Active loans</p>
+                  <p class="summary-stat-value ${activeRecords.length > 1 ? 'danger' : ''}">${activeRecords.length}</p>
+                </div>
+                <div class="summary-stat">
+                  <p class="summary-stat-label">Total outstanding</p>
+                  <p class="summary-stat-value ${totalOutstanding > 0 ? 'danger' : ''}">${lkr(totalOutstanding)}</p>
+                </div>
+                <div class="summary-stat">
+                  <p class="summary-stat-label">Settled loans</p>
+                  <p class="summary-stat-value success">${settledRecords.length}</p>
+                </div>
               </div>
             </div>
+          </section>
 
-          </div>
-
-          <!-- ── Records Table Card ── -->
-          <div class="result-card">
-            <div class="records-section">
-              <p class="records-section-title">All Records on Network (${records.length})</p>
-              <table class="records-table">
-                <thead>
+          <!-- ── Records ── -->
+          <h2 class="section-label">All records on network (${records.length})</h2>
+          <div class="table-wrap">
+            <table class="table table-stack">
+              <thead>
+                <tr>
+                  <th scope="col">Type</th>
+                  <th scope="col" class="num">Loan amount</th>
+                  <th scope="col" class="num">Outstanding</th>
+                  <th scope="col">Collateral</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date</th>
+                  <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${records.map(r => `
                   <tr>
-                    <th>Type</th>
-                    <th>Loan Amount</th>
-                    <th>Outstanding</th>
-                    <th>Collateral</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th style="text-align:center;">Action</th>
+                    <td data-label="Type">${esc(r.record_type)}</td>
+                    <td data-label="Loan amount" class="num">${lkr(r.loan_amount)}</td>
+                    <td data-label="Outstanding" class="num ${parseFloat(r.outstanding) > 0 ? 'amount-due' : 'amount-clear'}">${lkr(r.outstanding)}</td>
+                    <td data-label="Collateral">${esc(r.collateral || '—')}</td>
+                    <td data-label="Status">${statusBadge(r.status)}</td>
+                    <td data-label="Date">${new Date(r.created_at).toLocaleDateString('en-GB')}</td>
+                    <td class="actions"><button type="button" class="btn btn-sm btn-flag" data-record-id="${esc(r.id)}" aria-label="Flag ${esc(r.record_type)} record of ${lkr(r.loan_amount)}">Flag</button></td>
                   </tr>
-                </thead>
-                <tbody>
-                  ${records.map(r => `
-                    <tr>
-                      <td>${esc(r.record_type)}</td>
-                      <td>LKR ${parseFloat(r.loan_amount).toLocaleString()}</td>
-                      <td style="color:${parseFloat(r.outstanding) > 0 ? '#dc2626' : '#16a34a'}">LKR ${parseFloat(r.outstanding).toLocaleString()}</td>
-                      <td>${esc(r.collateral || '—')}</td>
-                      <td><span class="badge badge-${esc(r.status)}">${esc(r.status)}</span></td>
-                      <td>${new Date(r.created_at).toLocaleDateString()}</td>
-                      <td style="text-align:center;"><button class="btn-flag" data-record-id="${esc(r.id)}">⚑ Flag</button></td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
 
         `
@@ -442,57 +374,69 @@
 
       /* ── Dispute Modal Functions ── */
 
-      window.openDisputeModal = function(recordId) {
+      window.openDisputeModal = function(recordId, trigger) {
         const rec = currentRecords.find(r => r.id === recordId)
         if (!rec) return
         selectedRecordId = recordId
+        modalReturnFocus = trigger || document.activeElement
 
         // Show record details in the modal so the lender confirms which record they are flagging
         document.getElementById('dispute-record-info').innerHTML = `
-          <strong>Borrower:</strong> ${esc(rec.borrower_name)}<br>
-          <strong>NIC:</strong> ${esc(rec.borrower_nic)}<br>
-          <strong>Record Type:</strong> ${esc(rec.record_type)} &nbsp;|&nbsp; <strong>Loan Amount:</strong> LKR ${parseFloat(rec.loan_amount).toLocaleString()} &nbsp;|&nbsp; <strong>Status:</strong> ${esc(rec.status)}
+          <dt>Borrower</dt><dd>${esc(rec.borrower_name)}</dd>
+          <dt>NIC</dt><dd class="mono">${esc(rec.borrower_nic)}</dd>
+          <dt>Record</dt><dd>${esc(rec.record_type)} · ${lkr(rec.loan_amount)}</dd>
+          <dt>Status</dt><dd>${statusBadge(rec.status)}</dd>
         `
 
         // Reset the form
-        document.getElementById('dispute-reason').value = ''
+        const reasonEl = document.getElementById('dispute-reason')
+        reasonEl.value = ''
+        fieldError(reasonEl, null)
         document.getElementById('dispute-notes').value = ''
         document.getElementById('dispute-msg').innerHTML = ''
-        document.getElementById('dispute-form-fields').style.display = 'block'
-        document.getElementById('dispute-submit-btn').style.display = 'inline-block'
-        document.getElementById('dispute-submit-btn').disabled = false
-        document.getElementById('dispute-submit-btn').textContent = 'Submit Dispute'
+        document.getElementById('dispute-form-fields').hidden = false
+        const submitBtn = document.getElementById('dispute-submit-btn')
+        setLoading(submitBtn, false)
+        submitBtn.hidden = false
+        submitBtn.textContent = 'Submit Dispute'
 
         // Show the modal
         document.getElementById('dispute-modal').classList.add('active')
+        document.body.style.overflow = 'hidden'
+        reasonEl.focus()
       }
 
       window.closeDisputeModal = function() {
         document.getElementById('dispute-modal').classList.remove('active')
+        document.body.style.overflow = ''
         selectedRecordId = null
+        if (modalReturnFocus && document.body.contains(modalReturnFocus)) modalReturnFocus.focus()
       }
 
       window.submitDispute = async function() {
-        const reason = document.getElementById('dispute-reason').value
+        const reasonEl = document.getElementById('dispute-reason')
+        const reason = reasonEl.value
         const notes = document.getElementById('dispute-notes').value.trim()
         const msgArea = document.getElementById('dispute-msg')
         const submitBtn = document.getElementById('dispute-submit-btn')
+        const showMsg = (type, text) => { msgArea.innerHTML = `<div class="alert alert-${type}" role="alert">${esc(text)}</div>` }
 
         // Validate: reason is required
         if (!reason) {
-          msgArea.innerHTML = '<div class="modal-msg error">Please select a reason for flagging this record.</div>'
+          fieldError(reasonEl, 'Please select a reason for flagging this record.')
+          reasonEl.focus()
+          reasonEl.addEventListener('change', () => fieldError(reasonEl, null), { once: true })
           return
         }
 
         // Validate: must be logged in as a lender
         if (!currentLenderId) {
-          msgArea.innerHTML = '<div class="modal-msg error">Your lender account could not be verified. Please sign out and sign in again.</div>'
+          showMsg('danger', 'Your lender account could not be verified. Please sign out and sign in again.')
           return
         }
 
         // Disable button to prevent double-click
-        submitBtn.disabled = true
-        submitBtn.textContent = 'Submitting...'
+        setLoading(submitBtn, true, 'Submitting…')
         msgArea.innerHTML = ''
 
         // Check if this lender already flagged this same record
@@ -503,15 +447,15 @@
           .eq('raised_by', currentLenderId)
 
         if (checkError) {
-          msgArea.innerHTML = '<div class="modal-msg error">Something went wrong checking for existing disputes. Please try again.</div>'
-          submitBtn.disabled = false
-          submitBtn.textContent = 'Submit Dispute'
+          showMsg('danger', 'Something went wrong checking for existing disputes. Please try again.')
+          setLoading(submitBtn, false)
           return
         }
 
         if (existing && existing.length > 0) {
-          msgArea.innerHTML = '<div class="modal-msg error">You have already flagged this record. The admin will review your existing dispute.</div>'
-          submitBtn.style.display = 'none'
+          showMsg('warning', 'You have already flagged this record. The admin will review your existing dispute.')
+          setLoading(submitBtn, false)
+          submitBtn.hidden = true
           return
         }
 
@@ -527,9 +471,8 @@
           }])
 
         if (insertError) {
-          msgArea.innerHTML = '<div class="modal-msg error">Failed to submit dispute. Please try again. (' + insertError.message + ')</div>'
-          submitBtn.disabled = false
-          submitBtn.textContent = 'Submit Dispute'
+          showMsg('danger', 'Failed to submit dispute. Please try again. (' + insertError.message + ')')
+          setLoading(submitBtn, false)
           return
         }
 
@@ -541,18 +484,18 @@
         }])
 
         // Show success — hide form fields
-        msgArea.innerHTML = '<div class="modal-msg success">✓ Dispute submitted successfully. The admin will review this record and take action.</div>'
-        document.getElementById('dispute-form-fields').style.display = 'none'
-        submitBtn.style.display = 'none'
+        showMsg('success', 'Dispute submitted. The admin will review this record and take action.')
+        document.getElementById('dispute-form-fields').hidden = true
+        setLoading(submitBtn, false)
+        submitBtn.hidden = true
       }
 
-      // Close modal when clicking outside the box
-      document.getElementById('dispute-modal').addEventListener('click', function(e) {
+      // Close modal when clicking outside the box, or with Escape
+      document.getElementById('dispute-modal').addEventListener('mousedown', function(e) {
         if (e.target === this) closeDisputeModal()
       })
-
-      document.getElementById('nic-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') queryBorrower()
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && document.getElementById('dispute-modal').classList.contains('active')) closeDisputeModal()
       })
 
       // Deep-link support: insights.html → ?nic=… auto-runs the search.

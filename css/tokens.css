@@ -1,0 +1,125 @@
+/* ══════════════════════════════════════════ */
+/* ── Clarix Design Tokens                 ── */
+/* ══════════════════════════════════════════ */
+/* Single source of truth for colour, type, spacing, radius, shadow and motion.
+   Components in style.css / sidebar.css / page <style> blocks should reference
+   these variables, never raw hex. */
+
+:root {
+  /* ── Brand ── */
+  --brand-600: #1d4ed8;          /* primary — matches manifest theme-color + icons */
+  --brand-700: #1e40af;          /* primary hover / pressed */
+  --brand-500: #3b82f6;          /* focus ring, links on dark */
+  --brand-50:  #eff6ff;          /* tinted surfaces */
+  --brand-100: #dbeafe;
+
+  /* ── Navy (sidebar, login, shell) ── */
+  --navy-950: #0b1426;
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+
+  /* ── Neutrals (content area) ── */
+  --gray-50:  #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;           /* min for body text on white: 4.76:1 */
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-900: #0f172a;
+
+  /* ── Semantic surfaces & text ── */
+  --bg:            var(--gray-50);
+  --surface:       #ffffff;
+  --surface-muted: var(--gray-100);
+  --border:        var(--gray-200);
+  --border-strong: var(--gray-300);
+  --text:          var(--gray-900);
+  --text-muted:    var(--gray-600);
+  --text-subtle:   var(--gray-500);
+  --text-on-brand: #ffffff;
+
+  /* ── Status (always pair with a text label — never colour alone) ── */
+  --success-600: #15803d;  --success-50: #f0fdf4;  --success-200: #bbf7d0;
+  --warning-600: #b45309;  --warning-50: #fffbeb;  --warning-200: #fde68a;
+  --danger-600:  #dc2626;  --danger-700: #b91c1c;  --danger-50: #fef2f2;  --danger-200: #fecaca;
+  --info-600:    var(--brand-600); --info-50: var(--brand-50); --info-200: var(--brand-100);
+
+  /* ── Risk bands (Query Borrower, Insights) ── */
+  --risk-high:     var(--danger-600);   --risk-high-bg:    var(--danger-50);
+  --risk-medium:   var(--warning-600);  --risk-medium-bg:  var(--warning-50);
+  --risk-low:      var(--success-600);  --risk-low-bg:     var(--success-50);
+  --risk-unknown:  #c2410c;             --risk-unknown-bg: #fff7ed;
+
+  /* ── Typography ── */
+  /* Noto Sans Sinhala is a glyph fallback: Plex has no Sinhala, and Google
+     serves Noto by unicode-range so it only downloads on pages showing Sinhala. */
+  --font-sans: 'IBM Plex Sans', 'Noto Sans Sinhala', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --text-xs:   12px;   /* floor — nothing smaller */
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-md:   16px;   /* inputs: 16px stops iOS zoom-on-focus */
+  --text-lg:   18px;
+  --text-xl:   22px;
+  --text-2xl:  28px;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+  --weight-bold:    700;
+
+  --leading-tight: 1.25;
+  --leading-body:  1.5;
+
+  /* ── Spacing (dense / dashboard scale) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* ── Elevation ── */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+
+  /* ── Focus ── */
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.45);
+
+  /* ── Motion ── */
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── Layout ── */
+  --sidebar-w: 260px;
+  --topbar-h: 56px;
+  --bottomnav-h: 64px;
+  --content-max: 1100px;
+  --tap-min: 44px;
+
+  /* ── Layering ── */
+  --z-sidebar: 900;
+  --z-bottomnav: 850;
+  --z-modal: 1000;
+  --z-toast: 1100;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
