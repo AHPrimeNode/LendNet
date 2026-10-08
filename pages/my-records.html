@@ -241,9 +241,9 @@
             <td data-label="Status">${badge(r.status)}</td>
             <td data-label="Date" class="text-subtle">${fmtDate(r.created_at)}</td>
             <td class="actions">
-              <button type="button" class="btn btn-ghost btn-sm" data-action="view" data-id="${esc(r.id)}">View</button>
-              ${r.status !== 'settled' ? `<button type="button" class="btn btn-outline btn-sm" data-action="payment" data-id="${esc(r.id)}">Payment</button>` : ''}
-              ${r.status !== 'settled' ? `<button type="button" class="btn btn-ghost btn-sm tone-success" data-action="settle" data-id="${esc(r.id)}">Settle</button>` : ''}
+              <button type="button" class="btn btn-ghost btn-sm" data-action="view" data-id="${esc(r.id)}" aria-label="View ${esc(r.borrower_name)}">View</button>
+              ${r.status !== 'settled' ? `<button type="button" class="btn btn-outline btn-sm" data-action="payment" data-id="${esc(r.id)}" aria-label="Log payment for ${esc(r.borrower_name)}">Payment</button>` : ''}
+              ${r.status !== 'settled' ? `<button type="button" class="btn btn-ghost btn-sm tone-success" data-action="settle" data-id="${esc(r.id)}" aria-label="Settle ${esc(r.borrower_name)}">Settle</button>` : ''}
             </td>
           </tr>
         `).join('')
@@ -467,7 +467,7 @@
           }
         }
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('records')
           .update({
             outstanding: 0,
@@ -476,7 +476,9 @@
           })
           .eq('id', id)
 
-        toast('Record marked as settled.', 'success')
+        // The final payment row is already in — say so rather than claiming success
+        if (updateError) toast('Final payment logged, but the record was not marked settled: ' + updateError.message, 'error')
+        else toast('Record marked as settled.', 'success')
         loadRecords()
       }
 
@@ -552,7 +554,7 @@
               <td data-label="Date filed" class="text-subtle">${fmtDate(d.created_at)}</td>
               <td data-label="Status">${badge(d.status)}</td>
               <td class="actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-dispute="${esc(d.id)}">View</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-dispute="${esc(d.id)}" aria-label="View dispute on ${esc(record.borrower_name || 'removed record')}">View</button>
               </td>
             </tr>
           `

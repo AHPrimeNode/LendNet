@@ -6,6 +6,7 @@
 
 import { supabase } from './supabase.js'
 import { checkEnforcement } from './enforcement.js'
+import { trapTab } from './ui.js'
 
 // Only inject sidebar if user is authenticated — otherwise send them to login
 const { data: { session } } = await supabase.auth.getSession()
@@ -70,6 +71,9 @@ const navItems = [
 
 const current = page => currentPage === page ? ' active" aria-current="page' : ''
 
+// Pages without their own bottom-nav tab (Bulk Upload, Insights, Admin…) light up "More"
+const inBottomNav = navItems.slice(0, 4).some(item => item.page === currentPage)
+
 let adminNavHTML = ''
 if (isAdmin) {
   adminNavHTML = `
@@ -132,7 +136,7 @@ const bottomNavHTML = `
         ${item.icon}<span>${item.short}</span>
       </a>
     `).join('')}
-    <button type="button" class="bottom-nav-item" id="bottom-nav-more" aria-controls="sidebar" aria-expanded="false" onclick="window.toggleSidebar()">
+    <button type="button" class="bottom-nav-item${inBottomNav ? '' : ' active'}" id="bottom-nav-more" aria-controls="sidebar" aria-expanded="false" onclick="window.toggleSidebar()">
       ${icons.more}<span>More</span>
     </button>
   </nav>
@@ -212,11 +216,15 @@ window.toggleSidebar = function(force) {
   syncExpanded()
 }
 
-// Escape closes the mobile drawer
+// Mobile drawer is modal: Escape closes it, Tab stays inside it
+const sidebarEl = document.getElementById('sidebar')
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && mobileQuery.matches && document.body.classList.contains('sidebar-open')) {
+  if (!mobileQuery.matches || !document.body.classList.contains('sidebar-open')) return
+  if (e.key === 'Escape') {
     window.toggleSidebar(false)
     if (moreButton) moreButton.focus()
+  } else if (e.key === 'Tab') {
+    trapTab(e, sidebarEl)
   }
 })
 

@@ -2,7 +2,7 @@
 // ── Clarix Service Worker               ──
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'clarix-v8'
+const CACHE_NAME = 'clarix-v9'
 
 const STATIC_ASSETS = [
   '/',

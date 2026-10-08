@@ -318,8 +318,8 @@
             <td data-label="Status">${badge(app.status)}</td>
             <td data-label="Date" class="text-subtle">${fmtDate(app.created_at)}</td>
             <td class="actions">${app.status === 'new' ? `
-              <button type="button" class="btn btn-brand btn-sm btn-approve" data-app-id="${esc(app.id)}">Approve</button>
-              <button type="button" class="btn btn-ghost btn-sm tone-danger btn-reject" data-app-id="${esc(app.id)}">Reject</button>
+              <button type="button" class="btn btn-brand btn-sm btn-approve" data-app-id="${esc(app.id)}" aria-label="Approve ${esc(app.full_name)}">Approve</button>
+              <button type="button" class="btn btn-ghost btn-sm tone-danger btn-reject" data-app-id="${esc(app.id)}" aria-label="Reject ${esc(app.full_name)}">Reject</button>
             ` : '<span class="text-subtle">—</span>'}</td>
           </tr>
         `).join('')
@@ -415,10 +415,10 @@
               <td data-label="Date" class="text-subtle">${fmtDate(d.created_at)}</td>
               <td data-label="Status">${badge(d.status)}</td>
               <td class="actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-dispute-action="view" data-id="${esc(d.id)}">View</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-dispute-action="view" data-id="${esc(d.id)}" aria-label="View dispute on ${esc(record.borrower_name || 'unknown borrower')}">View</button>
                 ${d.status === 'pending' ? `
-                  <button type="button" class="btn btn-success btn-sm" data-dispute-action="resolve" data-id="${esc(d.id)}">Resolve</button>
-                  <button type="button" class="btn btn-ghost btn-sm tone-danger" data-dispute-action="reject" data-id="${esc(d.id)}">Reject</button>
+                  <button type="button" class="btn btn-success btn-sm" data-dispute-action="resolve" data-id="${esc(d.id)}" aria-label="Resolve dispute on ${esc(record.borrower_name || 'unknown borrower')}">Resolve</button>
+                  <button type="button" class="btn btn-ghost btn-sm tone-danger" data-dispute-action="reject" data-id="${esc(d.id)}" aria-label="Reject dispute on ${esc(record.borrower_name || 'unknown borrower')}">Reject</button>
                 ` : ''}
               </td>
             </tr>

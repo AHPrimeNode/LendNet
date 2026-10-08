@@ -343,5 +343,54 @@ export function setLoading(btn, loading, label) {
   }
 }
 
+// ── Page-wide keyboard behaviour ──
+
+/** Keep Tab / Shift+Tab inside `container`. Call from a keydown handler. */
+export function trapTab(e, container) {
+  const items = [...container.querySelectorAll(FOCUSABLE)].filter(el => !el.disabled && el.offsetParent !== null)
+  if (!items.length) return
+  const first = items[0], last = items[items.length - 1]
+  if (!container.contains(document.activeElement)) { e.preventDefault(); first.focus() }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+}
+
+// Static in-page modals (.form-modal-backdrop.active — Query Borrower dispute,
+// Admin resolve) get the same focus trap openModal() has.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return
+  // A confirmDialog / openModal stacked on top owns focus (its own trap handles it)
+  if (document.querySelector('.ui-modal-backdrop:not(.form-modal-backdrop)')) return
+  const open = document.querySelector('.form-modal-backdrop.active .ui-modal')
+  if (open) trapTab(e, open)
+})
+
+// ARIA tabs: arrow keys / Home / End move between tabs, and only the selected
+// tab sits in the Tab order (roving tabindex). Pages keep their own onclick
+// switchers — we just click() the target tab.
+function syncTabStops(list) {
+  list.querySelectorAll('[role="tab"]').forEach(t => {
+    t.tabIndex = t.getAttribute('aria-selected') === 'true' ? 0 : -1
+  })
+}
+document.querySelectorAll('[role="tablist"]').forEach(list => {
+  syncTabStops(list)
+  // Bubble phase runs after the tab's inline onclick has updated aria-selected
+  list.addEventListener('click', () => syncTabStops(list))
+  // Tabs can also be switched in code (e.g. admin's Analytics shortcut)
+  list.addEventListener('focusin', () => syncTabStops(list))
+  list.addEventListener('keydown', e => {
+    const tabs = [...list.querySelectorAll('[role="tab"]')]
+    const i = tabs.indexOf(document.activeElement)
+    if (i < 0) return
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    const target = tabs[(next + tabs.length) % tabs.length]
+    target.focus()
+    target.click()
+  })
+})
+
 // Also expose globally for inline handlers / non-module scripts.
-window.ui = { toast, alertDialog, confirmDialog, openModal, fieldError, clearFieldErrors, validate, setLoading }
+window.ui = { toast, alertDialog, confirmDialog, openModal, fieldError, clearFieldErrors, validate, setLoading, trapTab }
