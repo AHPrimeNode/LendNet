@@ -102,7 +102,8 @@ Admin notices displayed to lenders.
 - Lenders: UPDATE for own row OR admin (via `public.is_admin()`). Trigger `lenders_block_is_admin_change` rejects any client-side change to `is_admin` — only the SQL editor (postgres role) can flip it.
 - Audit log: INSERT for authenticated users
 - Queries: SELECT for authenticated users where `lender_id` matches the lender row whose `phone` equals the local-part of the JWT email (added 2026-04 so the dashboard's "Queries This Month" card can read its own rows)
-- Payments (hardened 2026-10-06, `sql/2026-10-06-payments-pii-hardening.sql`): full-row SELECT only for the lender who logged the payment, the lender who owns the record, or admin (policy `payments_select_own_or_admin`). Cross-lender scoring goes through RPC `public.payment_amounts(p_record_ids[])` — SECURITY DEFINER, returns only `(record_id, amount)`, caller must be a lender, EXECUTE granted to `authenticated` only. RPC chosen over a view because Supabase's advisor flags SECURITY DEFINER views. **Run that SQL before deploying the client change**, otherwise Query Borrower/Insights scoring calls a missing RPC.
+- Payments (hardened 2026-10-06, `sql/2026-10-06-payments-pii-hardening.sql`): full-row SELECT only for the lender who logged the payment, the lender who owns the record, or admin (policy `payments_select_own_or_admin`). Cross-lender scoring goes through RPC `public.payment_amounts(p_record_ids[])` — SECURITY DEFINER, returns only `(record_id, amount)`, caller must be a lender, EXECUTE granted to `authenticated` only. RPC chosen over a view because Supabase's advisor flags SECURITY DEFINER views. **Run that SQL before deploying the client change**, otherwise Query Borrower/Insights scoring calls a missing RPC. **Ran in production 2026-10-08.**
+- Payments INSERT (hardened 2026-10-08, `sql/2026-10-08-payments-insert-hardening.sql`): was `TO public WITH CHECK (true)` — anon key could insert any payment. Now `payments_insert_own_records`: `TO authenticated`, `lender_id` must be the caller's lender row AND `record_id` a record the caller owns (or `is_admin()`). Matches all client paths (My Records save/settle, Bulk Payments). Verified: anon insert → `42501` / HTTP 401.
 
 ## Sidebar Navigation (sidebar.js)
 - Auto-injects into any page that includes `<script type="module" src="../js/sidebar.js"></script>`
@@ -280,7 +281,7 @@ Admin notices displayed to lenders.
 - **Compliance threshold:** see Bulk Upload §7.
 
 ## Pending Follow-ups
-- **Run `sql/2026-10-06-payments-pii-hardening.sql`** in the Supabase SQL editor, check its final verify query shows only `payments_select_own_or_admin` for SELECT (and no `ALL` policy with `qual = true`), then deploy the client change and confirm Query Borrower still shows partial-payment signals for cross-lender borrowers.
+- **Audit other tables for open policies.** On 2026-10-08 `payments` had an INSERT policy `TO public WITH CHECK (true)` (anon could insert). Check `records`, `disputes`, `queries`, `audit_log`, `applications`, `announcements` for the same pattern: `SELECT tablename, policyname, cmd, roles, qual, with_check FROM pg_policies WHERE schemaname='public' AND (roles @> '{public}' OR qual='true' OR with_check='true');` Note `applications` INSERT legitimately needs anon (apply.html is pre-login).
 
 ## Features Deferred
 - Borrower Self-Lookup Portal — deferred for now
